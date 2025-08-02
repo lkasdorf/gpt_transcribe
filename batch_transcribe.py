@@ -71,7 +71,7 @@ def main() -> None:
         if audio_file.suffix.lower() not in AUDIO_EXTS:
             continue
         if audio_file.name in processed:
-            print(f"{audio_file.name} wurde bereits verarbeitet.")
+            print(f"{audio_file.name} is already processed.")
             continue
         _process_file(audio_file)
 
