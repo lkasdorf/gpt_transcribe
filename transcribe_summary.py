@@ -104,8 +104,6 @@ def strip_code_fences(text: str) -> str:
             lines = lines[:-1]
         return "\n".join(lines).strip()
     return text
-
-
 def transcribe(audio_path: str, model_name: str = "base") -> str:
     """Transcribe an audio file using Whisper.
 

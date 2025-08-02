@@ -8,6 +8,7 @@ work.
 The output filename follows the pattern ``YYYYMMDD_NameOfTheFile.md`` with a
 matching ``.pdf`` file.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -53,6 +54,7 @@ def _process_file(path: Path) -> None:
         prompt, transcript, summary_model, api_key
     )
     summary = transcribe_summary.strip_code_fences(summary)
+
     now = datetime.now()
     output_name = f"{now:%Y%m%d}_{path.stem}.md"
     OUTPUT_DIR.mkdir(exist_ok=True)
@@ -65,7 +67,6 @@ def _process_file(path: Path) -> None:
     _append_processed(path.name)
     print(f"Finished: {output_path}")
     print(f"PDF saved to {pdf_path}")
-
 
 def main() -> None:
     AUDIO_DIR.mkdir(exist_ok=True)

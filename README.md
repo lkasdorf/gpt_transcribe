@@ -62,5 +62,5 @@ python batch_transcribe.py
 
 Summaries will be written to the `output` directory with filenames in the
 form `YYYYMMDD_NameOfTheFile.md` and a matching `.pdf` file. Successfully
-processed audio files are tracked in `processed.log` to avoid duplicate work.
 
+processed audio files are tracked in `processed.log` to avoid duplicate work.
