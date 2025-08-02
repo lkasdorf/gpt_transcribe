@@ -4,7 +4,7 @@ import os
 import tempfile
 from pathlib import Path
 
-
+tempfile.tempdir = os.getcwd()
 
 API_KEY_FILE = "openai_api_key.txt"
 MODEL_FILE = "openai_model.txt"
@@ -34,6 +34,8 @@ def transcribe(audio_path: str, model_name: str = "base") -> str:
         return result["text"].strip()
 
     audio_format = Path(audio_path).suffix.lstrip(".")
+    # stattdessen immer WAV benutzen:
+    export_format = "wav"
     audio = AudioSegment.from_file(audio_path)
     num_chunks = math.ceil(os.path.getsize(audio_path) / MAX_CHUNK_BYTES)
     chunk_length_ms = len(audio) // num_chunks
@@ -43,11 +45,10 @@ def transcribe(audio_path: str, model_name: str = "base") -> str:
         start_ms = i * chunk_length_ms
         end_ms = min((i + 1) * chunk_length_ms, len(audio))
         chunk = audio[start_ms:end_ms]
-        with tempfile.NamedTemporaryFile(
-            suffix=f".{audio_format}", dir=os.getcwd(), delete=False
-        ) as tmp:
-            tmp_path = tmp.name
-        chunk.export(tmp_path, format=audio_format)
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+           tmp_path = tmp.name
+        # explizit WAV verwenden – so umgehst du m4a-Probleme
+        chunk.export(tmp_path, format="wav")
         result = model.transcribe(tmp_path)
         texts.append(result["text"].strip())
         os.remove(tmp_path)
