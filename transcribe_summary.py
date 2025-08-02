@@ -12,21 +12,16 @@ def _load_text(path: str) -> str:
     with open(path, "r", encoding="utf-8") as f:
         return f.read().strip()
 
-
-=======
-
 def transcribe(audio_path: str, model_name: str = "base") -> str:
     """Transcribe an audio file using Whisper."""
     model = whisper.load_model(model_name)
     result = model.transcribe(audio_path)
     return result["text"].strip()
 
-
-
 def summarize(prompt: str, transcript: str, model_name: str, api_key: str) -> str:
     """Generate a summary of the transcript using a chat model."""
     client = OpenAI(api_key=api_key)
-=======
+
 def summarize(prompt: str, transcript: str, model_name: str = "gpt-3.5-turbo") -> str:
     """Generate a summary of the transcript using a chat model."""
     client = OpenAI()
@@ -55,7 +50,6 @@ def main() -> None:
         help="Name of the Whisper model to use (default: base)",
     )
 
-=======
     parser.add_argument(
         "--summary-model",
         default="gpt-3.5-turbo",
@@ -72,7 +66,7 @@ def main() -> None:
     api_key = _load_text(API_KEY_FILE)
     summary_model = _load_text(MODEL_FILE)
     summary = summarize(prompt, transcript, summary_model, api_key)
-=======
+
     summary = summarize(prompt, transcript, model_name=args.summary_model)
 
 
@@ -82,7 +76,6 @@ def main() -> None:
         f.write("\n")
 
     print(f"Summary written to {args.output}")
-
 
 if __name__ == "__main__":
     main()
