@@ -1,10 +1,12 @@
 import argparse
 import math
 import os
+import shutil
 import tempfile
 from pathlib import Path
 
-tempfile.tempdir = os.getcwd()
+BASE_DIR = Path(__file__).resolve().parent
+TEMP_DIR = BASE_DIR / "temp"
 
 API_KEY_FILE = "openai_api_key.txt"
 MODEL_FILE = "openai_model.txt"
@@ -27,42 +29,44 @@ def transcribe(audio_path: str, model_name: str = "base") -> str:
     import whisper
     from pydub import AudioSegment
 
-    model = whisper.load_model(model_name)
+    TEMP_DIR.mkdir(exist_ok=True)
+    try:
+        model = whisper.load_model(model_name)
 
-    if os.path.getsize(audio_path) <= MAX_CHUNK_BYTES:
-        print("Transcribing whole file...")
-        # force FP32 on CPU to suppress FP16 warning
-        result = model.transcribe(audio_path, fp16=False)
-        return result["text"].strip()
+        if os.path.getsize(audio_path) <= MAX_CHUNK_BYTES:
+            print("Transcribing whole file...")
+            # force FP32 on CPU to suppress FP16 warning
+            result = model.transcribe(audio_path, fp16=False)
+            return result["text"].strip()
 
+        audio_format = Path(audio_path).suffix.lstrip(".").lower()
+        export_format = {"m4a": "mp4", "aac": "adts"}.get(audio_format, audio_format)
 
-    audio_format = Path(audio_path).suffix.lstrip(".").lower()
-    export_format = {"m4a": "mp4", "aac": "adts"}.get(audio_format, audio_format)
+        audio = AudioSegment.from_file(audio_path)
+        num_chunks = math.ceil(os.path.getsize(audio_path) / MAX_CHUNK_BYTES)
+        chunk_length_ms = len(audio) // num_chunks
+        print(f"Transcribing audio in {num_chunks} chunks...")
 
-    audio = AudioSegment.from_file(audio_path)
-    num_chunks = math.ceil(os.path.getsize(audio_path) / MAX_CHUNK_BYTES)
-    chunk_length_ms = len(audio) // num_chunks
-    print(f"Transcribing audio in {num_chunks} chunks...")
+        texts = []
+        for i in range(num_chunks):
+            start_ms = i * chunk_length_ms
+            end_ms = min((i + 1) * chunk_length_ms, len(audio))
+            chunk = audio[start_ms:end_ms]
+            with tempfile.NamedTemporaryFile(
+                suffix=f".{audio_format}", dir=TEMP_DIR, delete=False
+            ) as tmp:
+                tmp_path = tmp.name
+            print(f"Transcribing chunk {i + 1}/{num_chunks}...")
+            chunk.export(tmp_path, format=export_format)
+            # force FP32 on CPU to suppress FP16 warning
+            result = model.transcribe(tmp_path, fp16=False)
+            texts.append(result["text"].strip())
+            os.remove(tmp_path)
+            print(f"Finished chunk {i + 1}/{num_chunks}")
 
-    texts = []
-    for i in range(num_chunks):
-        start_ms = i * chunk_length_ms
-        end_ms = min((i + 1) * chunk_length_ms, len(audio))
-        chunk = audio[start_ms:end_ms]
-        with tempfile.NamedTemporaryFile(
-            suffix=f".{audio_format}", dir=os.getcwd(), delete=False
-        ) as tmp:
-            tmp_path = tmp.name
-        print(f"Transcribing chunk {i + 1}/{num_chunks}...")
-        chunk.export(tmp_path, format=export_format)
-        # force FP32 on CPU to suppress FP16 warning
-        result = model.transcribe(tmp_path, fp16=False)
-        texts.append(result["text"].strip())
-        os.remove(tmp_path)
-        print(f"Finished chunk {i + 1}/{num_chunks}")
-
-
-    return " ".join(texts)
+        return " ".join(texts)
+    finally:
+        shutil.rmtree(TEMP_DIR, ignore_errors=True)
 
 
 def summarize(prompt: str, transcript: str, model_name: str, api_key: str) -> str:

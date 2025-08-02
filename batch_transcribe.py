@@ -1,12 +1,10 @@
-"""Batch transcribe audio files from the `audio` directory.
+"""Batch process audio files from the `audio` directory.
 
 This script processes all audio files placed in the `audio` directory and
-writes transcripts to the `output` directory. After a file is processed its
-name is stored in `processed.log` to avoid duplicate work.
+writes summarized Markdown files to the `output` directory. After a file is
+processed its name is stored in `processed.log` to avoid duplicate work.
 
-The output filename follows the pattern ``YYYYMMDD_NameOfTheFile.txt`` and the
-resulting file starts with the original audio filename and the timestamp of the
-transcription.
+The output filename follows the pattern ``YYYYMMDD_NameOfTheFile.md``.
 """
 from __future__ import annotations
 
@@ -37,15 +35,27 @@ def _append_processed(filename: str) -> None:
 
 def _process_file(path: Path) -> None:
     print(f"Transkribiere {path.name} ...")
-    text = transcribe_summary.transcribe(str(path))
+    transcript = transcribe_summary.transcribe(str(path))
+    print("Erstelle Zusammenfassung ...")
+    prompt = transcribe_summary._load_text(
+        transcribe_summary.BASE_DIR / transcribe_summary.PROMPT_FILE
+    )
+    api_key = transcribe_summary._load_text(
+        transcribe_summary.BASE_DIR / transcribe_summary.API_KEY_FILE
+    )
+    summary_model = transcribe_summary._load_text(
+        transcribe_summary.BASE_DIR / transcribe_summary.MODEL_FILE
+    )
+    summary = transcribe_summary.summarize(
+        prompt, transcript, summary_model, api_key
+    )
     now = datetime.now()
-    output_name = f"{now:%Y%m%d}_{path.stem}.txt"
+    output_name = f"{now:%Y%m%d}_{path.stem}.md"
     OUTPUT_DIR.mkdir(exist_ok=True)
-    header = f"{path.name} - {now:%Y-%m-%d %H:%M:%S}\n\n"
     output_path = OUTPUT_DIR / output_name
     with output_path.open("w", encoding="utf-8") as f:
-        f.write(header)
-        f.write(text)
+        f.write("# Summary\n\n")
+        f.write(summary)
         f.write("\n")
     _append_processed(path.name)
     print(f"Fertig: {output_path}")

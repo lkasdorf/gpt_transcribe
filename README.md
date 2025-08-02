@@ -59,8 +59,7 @@ and run:
 python batch_transcribe.py
 ```
 
-Transcripts will be written to the `output` directory with filenames in the
-form `YYYYMMDD_NameOfTheFile.txt`. Each file begins with the original audio
-name and the timestamp of transcription. Successfully processed audio files
-are tracked in `processed.log` to avoid duplicate work.
+Summaries will be written to the `output` directory with filenames in the
+form `YYYYMMDD_NameOfTheFile.md`. Successfully processed audio files are
+tracked in `processed.log` to avoid duplicate work.
 
