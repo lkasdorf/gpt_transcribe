@@ -1,12 +1,22 @@
 # gpt_transcribe
 
 Transcribe audio files with Whisper and summarize the result using a chat model.
+The script runs on both Linux and Windows.
 
-## Requirements
-- Python 3.8+
-- [openai-whisper](https://github.com/openai/whisper)
-- [openai](https://pypi.org/project/openai/)
-- [pydub](https://github.com/jiaaro/pydub) and [ffmpeg](https://ffmpeg.org/)
+## Installation
+
+1. Install Python 3.8 or newer.
+2. Install [ffmpeg](https://ffmpeg.org/).
+   - Linux: `sudo apt install ffmpeg`
+   - Windows: download a build from the ffmpeg website and add it to your `PATH`.
+3. (Optional) Create and activate a virtual environment:
+   - Linux/macOS: `python3 -m venv .venv && source .venv/bin/activate`
+   - Windows: `python -m venv .venv && .venv\Scripts\activate`
+4. Install Python dependencies:
+
+```bash
+pip install -r requirements.txt
+```
 
 ## Usage
 1. Create `openai_api_key.txt` containing your OpenAI API key (this file is ignored by git).
@@ -15,13 +25,23 @@ Transcribe audio files with Whisper and summarize the result using a chat model.
 4. Run the script:
 
 ```bash
-python transcribe_summary.py path/to/audio.mp3 output.md
+# Windows
+python transcribe_summary.py path\to\audio.mp3 output.md
+
+# Linux/macOS
+python3 transcribe_summary.py path/to/audio.mp3 output.md
 ```
 
 Optionally select different models or prompt:
 
 ```bash
-python transcribe_summary.py audio.m4a summary.md \
+# Windows (use ^ for line continuation)
+python transcribe_summary.py audio.m4a summary.md ^
+  --whisper-model base --summary-model gpt-3.5-turbo ^
+  --prompt-file other_prompt.txt
+
+# Linux/macOS
+python3 transcribe_summary.py audio.m4a summary.md \
   --whisper-model base --summary-model gpt-3.5-turbo \
   --prompt-file other_prompt.txt
 ```
