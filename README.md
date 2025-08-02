@@ -13,15 +13,26 @@ Transcribe audio files with Whisper and summarize the result using a chat model.
 3. Prepare a text file containing the prompt for the summary.
 4. Run the script:
 
+1. Set the `OPENAI_API_KEY` environment variable with your OpenAI API key.
+2. Prepare a text file containing the prompt for the summary.
+3. Run the script:
+
 ```bash
 python transcribe_summary.py path/to/audio.wav prompt.txt output.md
 ```
+
 
 Optionally select a different Whisper model:
 
 ```bash
 python transcribe_summary.py audio.wav prompt.txt summary.md \
   --whisper-model base
+
+Optional arguments allow selecting different models:
+
+```bash
+python transcribe_summary.py audio.wav prompt.txt summary.md \
+  --whisper-model base --summary-model gpt-3.5-turbo
 ```
 
 The summary will be written to the specified Markdown file.
