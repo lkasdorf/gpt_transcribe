@@ -43,10 +43,14 @@ def transcribe(audio_path: str, model_name: str = "base") -> str:
         start_ms = i * chunk_length_ms
         end_ms = min((i + 1) * chunk_length_ms, len(audio))
         chunk = audio[start_ms:end_ms]
-        with tempfile.NamedTemporaryFile(suffix=f".{audio_format}") as tmp:
-            chunk.export(tmp.name, format=audio_format)
-            result = model.transcribe(tmp.name)
-            texts.append(result["text"].strip())
+        with tempfile.NamedTemporaryFile(
+            suffix=f".{audio_format}", dir=os.getcwd(), delete=False
+        ) as tmp:
+            tmp_path = tmp.name
+        chunk.export(tmp_path, format=audio_format)
+        result = model.transcribe(tmp_path)
+        texts.append(result["text"].strip())
+        os.remove(tmp_path)
 
     return " ".join(texts)
 
