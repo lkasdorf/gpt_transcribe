@@ -4,7 +4,7 @@ import os
 import tempfile
 from pathlib import Path
 
-
+tempfile.tempdir = os.getcwd()
 
 API_KEY_FILE = "openai_api_key.txt"
 MODEL_FILE = "openai_model.txt"
@@ -35,8 +35,10 @@ def transcribe(audio_path: str, model_name: str = "base") -> str:
         result = model.transcribe(audio_path, fp16=False)
         return result["text"].strip()
 
+
     audio_format = Path(audio_path).suffix.lstrip(".").lower()
     export_format = {"m4a": "mp4", "aac": "adts"}.get(audio_format, audio_format)
+
     audio = AudioSegment.from_file(audio_path)
     num_chunks = math.ceil(os.path.getsize(audio_path) / MAX_CHUNK_BYTES)
     chunk_length_ms = len(audio) // num_chunks
@@ -58,6 +60,7 @@ def transcribe(audio_path: str, model_name: str = "base") -> str:
         texts.append(result["text"].strip())
         os.remove(tmp_path)
         print(f"Finished chunk {i + 1}/{num_chunks}")
+
 
     return " ".join(texts)
 
