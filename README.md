@@ -48,7 +48,8 @@ python3 transcribe_summary.py audio.m4a summary.md \
 
 Large MP3 or m4a files over 25 MB are automatically split into smaller chunks before transcription.
 
-The summary will be written to the specified Markdown file.
+The summary will be written to the specified Markdown file and an accompanying
+PDF file with bookmarks.
 
 ## Batch transcription
 
@@ -59,8 +60,7 @@ and run:
 python batch_transcribe.py
 ```
 
-Transcripts will be written to the `output` directory with filenames in the
-form `YYYYMMDD_NameOfTheFile.txt`. Each file begins with the original audio
-name and the timestamp of transcription. Successfully processed audio files
-are tracked in `processed.log` to avoid duplicate work.
+Summaries will be written to the `output` directory with filenames in the
+form `YYYYMMDD_NameOfTheFile.md` and a matching `.pdf` file. Successfully
+processed audio files are tracked in `processed.log` to avoid duplicate work.
 
