@@ -5,6 +5,17 @@ import shutil
 import tempfile
 from pathlib import Path
 
+from reportlab.lib.pagesizes import LETTER
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import (
+    ListFlowable,
+    ListItem,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+)
+
 BASE_DIR = Path(__file__).resolve().parent
 TEMP_DIR = BASE_DIR / "temp"
 
@@ -17,6 +28,67 @@ MAX_CHUNK_BYTES = 25 * 1024 * 1024
 def _load_text(path: str) -> str:
     with open(path, "r", encoding="utf-8") as f:
         return f.read().strip()
+
+
+def markdown_to_pdf(markdown_text: str, pdf_path: str) -> None:
+    """Convert Markdown text to a PDF file with bookmarks."""
+    styles = getSampleStyleSheet()
+    heading1 = ParagraphStyle("Heading1", parent=styles["Heading1"])
+    heading1.outlineLevel = 0
+    heading2 = ParagraphStyle("Heading2", parent=styles["Heading2"])
+    heading2.outlineLevel = 1
+    body = styles["BodyText"]
+
+    flowables = []
+    list_items = []
+    in_list = False
+
+    lines = markdown_text.splitlines()
+    for line in lines:
+        line = line.rstrip()
+        if not line:
+            if in_list:
+                flowables.append(ListFlowable(list_items, bulletType="bullet"))
+                list_items = []
+                in_list = False
+            flowables.append(Spacer(1, 0.2 * inch))
+            continue
+        if line.startswith("### "):
+            if in_list:
+                flowables.append(ListFlowable(list_items, bulletType="bullet"))
+                list_items = []
+                in_list = False
+            heading = Paragraph(line[4:], heading2)
+            flowables.append(heading)
+        elif line.startswith("## "):
+            if in_list:
+                flowables.append(ListFlowable(list_items, bulletType="bullet"))
+                list_items = []
+                in_list = False
+            heading = Paragraph(line[3:], heading2)
+            flowables.append(heading)
+        elif line.startswith("# "):
+            if in_list:
+                flowables.append(ListFlowable(list_items, bulletType="bullet"))
+                list_items = []
+                in_list = False
+            heading = Paragraph(line[2:], heading1)
+            flowables.append(heading)
+        elif line.startswith("- "):
+            in_list = True
+            list_items.append(ListItem(Paragraph(line[2:], body)))
+        else:
+            if in_list:
+                flowables.append(ListFlowable(list_items, bulletType="bullet"))
+                list_items = []
+                in_list = False
+            flowables.append(Paragraph(line, body))
+
+    if in_list:
+        flowables.append(ListFlowable(list_items, bulletType="bullet"))
+
+    doc = SimpleDocTemplate(pdf_path, pagesize=LETTER)
+    doc.build(flowables)
 
 
 def transcribe(audio_path: str, model_name: str = "base") -> str:
@@ -121,12 +193,15 @@ def main() -> None:
     summary = summarize(prompt, transcript, summary_model, api_key)
     print("Summary complete.")
 
+    markdown_content = "# Summary\n\n" + summary + "\n"
     with open(args.output, "w", encoding="utf-8") as f:
-        f.write("# Summary\n\n")
-        f.write(summary)
-        f.write("\n")
+        f.write(markdown_content)
+
+    pdf_path = Path(args.output).with_suffix(".pdf")
+    markdown_to_pdf(markdown_content, str(pdf_path))
 
     print(f"Summary written to {args.output}")
+    print(f"PDF written to {pdf_path}")
 
 if __name__ == "__main__":
     main()

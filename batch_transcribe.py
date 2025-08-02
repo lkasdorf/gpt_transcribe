@@ -1,11 +1,14 @@
 """Batch process audio files from the `audio` directory.
 
 This script processes all audio files placed in the `audio` directory and
-writes summarized Markdown files to the `output` directory. After a file is
-processed its name is stored in `processed.log` to avoid duplicate work.
+writes summarized Markdown and PDF files to the `output` directory. After a
+file is processed its name is stored in `processed.log` to avoid duplicate
+work.
 
-The output filename follows the pattern ``YYYYMMDD_NameOfTheFile.md``.
+The output filename follows the pattern ``YYYYMMDD_NameOfTheFile.md`` with a
+matching ``.pdf`` file.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -54,13 +57,14 @@ def _process_file(path: Path) -> None:
     output_name = f"{now:%Y%m%d}_{path.stem}.md"
     OUTPUT_DIR.mkdir(exist_ok=True)
     output_path = OUTPUT_DIR / output_name
+    markdown_content = "# Summary\n\n" + summary + "\n"
     with output_path.open("w", encoding="utf-8") as f:
-        f.write("# Summary\n\n")
-        f.write(summary)
-        f.write("\n")
+        f.write(markdown_content)
+    pdf_path = OUTPUT_DIR / f"{now:%Y%m%d}_{path.stem}.pdf"
+    transcribe_summary.markdown_to_pdf(markdown_content, str(pdf_path))
     _append_processed(path.name)
     print(f"Finished: {output_path}")
-
+    print(f"PDF saved to {pdf_path}")
 
 def main() -> None:
     AUDIO_DIR.mkdir(exist_ok=True)
