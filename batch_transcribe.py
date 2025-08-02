@@ -34,9 +34,10 @@ def _append_processed(filename: str) -> None:
 
 
 def _process_file(path: Path) -> None:
-    print(f"Transkribiere {path.name} ...")
+    """Transcribe a single audio file and write its summary."""
+    print(f"Transcribing {path.name}...")
     transcript = transcribe_summary.transcribe(str(path))
-    print("Erstelle Zusammenfassung ...")
+    print("Creating summary...")
     prompt = transcribe_summary._load_text(
         transcribe_summary.BASE_DIR / transcribe_summary.PROMPT_FILE
     )
@@ -58,7 +59,7 @@ def _process_file(path: Path) -> None:
         f.write(summary)
         f.write("\n")
     _append_processed(path.name)
-    print(f"Fertig: {output_path}")
+    print(f"Finished: {output_path}")
 
 
 def main() -> None:
@@ -71,7 +72,7 @@ def main() -> None:
         if audio_file.suffix.lower() not in AUDIO_EXTS:
             continue
         if audio_file.name in processed:
-            print(f"{audio_file.name} wurde bereits verarbeitet.")
+            print(f"{audio_file.name} has already been processed.")
             continue
         _process_file(audio_file)
 
