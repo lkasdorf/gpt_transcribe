@@ -53,6 +53,8 @@ def _process_file(path: Path) -> None:
     summary = transcribe_summary.summarize(
         prompt, transcript, summary_model, api_key
     )
+    summary = transcribe_summary.strip_code_fences(summary)
+
     now = datetime.now()
     output_name = f"{now:%Y%m%d}_{path.stem}.md"
     OUTPUT_DIR.mkdir(exist_ok=True)

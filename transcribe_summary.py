@@ -46,6 +46,8 @@ def markdown_to_pdf(markdown_text: str, pdf_path: str) -> None:
     lines = markdown_text.splitlines()
     for line in lines:
         line = line.rstrip()
+        if line.startswith("```"):
+            continue
         if not line:
             if in_list:
                 flowables.append(ListFlowable(list_items, bulletType="bullet"))
@@ -91,6 +93,17 @@ def markdown_to_pdf(markdown_text: str, pdf_path: str) -> None:
     doc.build(flowables)
 
 
+def strip_code_fences(text: str) -> str:
+    """Remove surrounding Markdown code fences from text."""
+    if text.startswith("```"):
+        lines = text.splitlines()
+        # Drop opening fence
+        lines = lines[1:]
+        # Drop closing fence if present
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        return "\n".join(lines).strip()
+    return text
 def transcribe(audio_path: str, model_name: str = "base") -> str:
     """Transcribe an audio file using Whisper.
 
@@ -191,6 +204,7 @@ def main() -> None:
     api_key = _load_text(API_KEY_FILE)
     summary_model = args.summary_model or _load_text(MODEL_FILE)
     summary = summarize(prompt, transcript, summary_model, api_key)
+    summary = strip_code_fences(summary)
     print("Summary complete.")
 
     markdown_content = "# Summary\n\n" + summary + "\n"
