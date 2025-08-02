@@ -207,3 +207,8 @@ marimo/_lsp/
 __marimo__/
 openai_api_key.txt
 audio.m4a
+processed.log
+audio/*
+!audio/.gitkeep
+output/*
+!output/.gitkeep

@@ -50,3 +50,17 @@ Large MP3 or m4a files over 25 MB are automatically split into smaller chunks be
 
 The summary will be written to the specified Markdown file.
 
+## Batch transcription
+
+To process many audio files automatically, place them in the `audio` directory
+and run:
+
+```bash
+python batch_transcribe.py
+```
+
+Transcripts will be written to the `output` directory with filenames in the
+form `YYYYMMDD_NameOfTheFile.txt`. Each file begins with the original audio
+name and the timestamp of transcription. Successfully processed audio files
+are tracked in `processed.log` to avoid duplicate work.
+

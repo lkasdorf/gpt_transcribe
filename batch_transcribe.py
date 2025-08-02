@@ -1,0 +1,70 @@
+"""Batch transcribe audio files from the `audio` directory.
+
+This script processes all audio files placed in the `audio` directory and
+writes transcripts to the `output` directory. After a file is processed its
+name is stored in `processed.log` to avoid duplicate work.
+
+The output filename follows the pattern ``YYYYMMDD_NameOfTheFile.txt`` and the
+resulting file starts with the original audio filename and the timestamp of the
+transcription.
+"""
+from __future__ import annotations
+
+from datetime import datetime
+from pathlib import Path
+from typing import Set
+
+import transcribe_summary
+
+BASE_DIR = Path(__file__).resolve().parent
+AUDIO_DIR = BASE_DIR / "audio"
+OUTPUT_DIR = BASE_DIR / "output"
+LOG_FILE = BASE_DIR / "processed.log"
+AUDIO_EXTS = {".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg", ".wma"}
+
+
+def _load_processed() -> Set[str]:
+    if not LOG_FILE.exists():
+        return set()
+    with LOG_FILE.open("r", encoding="utf-8") as f:
+        return {line.strip() for line in f if line.strip()}
+
+
+def _append_processed(filename: str) -> None:
+    with LOG_FILE.open("a", encoding="utf-8") as f:
+        f.write(f"{filename}\n")
+
+
+def _process_file(path: Path) -> None:
+    print(f"Transkribiere {path.name} ...")
+    text = transcribe_summary.transcribe(str(path))
+    now = datetime.now()
+    output_name = f"{now:%Y%m%d}_{path.stem}.txt"
+    OUTPUT_DIR.mkdir(exist_ok=True)
+    header = f"{path.name} - {now:%Y-%m-%d %H:%M:%S}\n\n"
+    output_path = OUTPUT_DIR / output_name
+    with output_path.open("w", encoding="utf-8") as f:
+        f.write(header)
+        f.write(text)
+        f.write("\n")
+    _append_processed(path.name)
+    print(f"Fertig: {output_path}")
+
+
+def main() -> None:
+    AUDIO_DIR.mkdir(exist_ok=True)
+    OUTPUT_DIR.mkdir(exist_ok=True)
+    processed = _load_processed()
+    for audio_file in AUDIO_DIR.iterdir():
+        if not audio_file.is_file():
+            continue
+        if audio_file.suffix.lower() not in AUDIO_EXTS:
+            continue
+        if audio_file.name in processed:
+            print(f"{audio_file.name} wurde bereits verarbeitet.")
+            continue
+        _process_file(audio_file)
+
+
+if __name__ == "__main__":
+    main()
