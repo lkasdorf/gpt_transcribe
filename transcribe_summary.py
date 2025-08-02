@@ -30,28 +30,37 @@ def transcribe(audio_path: str, model_name: str = "base") -> str:
     model = whisper.load_model(model_name)
 
     if os.path.getsize(audio_path) <= MAX_CHUNK_BYTES:
-        result = model.transcribe(audio_path)
+        print("Transcribing whole file...")
+        # force FP32 on CPU to suppress FP16 warning
+        result = model.transcribe(audio_path, fp16=False)
         return result["text"].strip()
 
-    audio_format = Path(audio_path).suffix.lstrip(".")
-    # stattdessen immer WAV benutzen:
-    export_format = "wav"
+
+    audio_format = Path(audio_path).suffix.lstrip(".").lower()
+    export_format = {"m4a": "mp4", "aac": "adts"}.get(audio_format, audio_format)
+
     audio = AudioSegment.from_file(audio_path)
     num_chunks = math.ceil(os.path.getsize(audio_path) / MAX_CHUNK_BYTES)
     chunk_length_ms = len(audio) // num_chunks
+    print(f"Transcribing audio in {num_chunks} chunks...")
 
     texts = []
     for i in range(num_chunks):
         start_ms = i * chunk_length_ms
         end_ms = min((i + 1) * chunk_length_ms, len(audio))
         chunk = audio[start_ms:end_ms]
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-           tmp_path = tmp.name
-        # explizit WAV verwenden – so umgehst du m4a-Probleme
-        chunk.export(tmp_path, format="wav")
-        result = model.transcribe(tmp_path)
+        with tempfile.NamedTemporaryFile(
+            suffix=f".{audio_format}", dir=os.getcwd(), delete=False
+        ) as tmp:
+            tmp_path = tmp.name
+        print(f"Transcribing chunk {i + 1}/{num_chunks}...")
+        chunk.export(tmp_path, format=export_format)
+        # force FP32 on CPU to suppress FP16 warning
+        result = model.transcribe(tmp_path, fp16=False)
         texts.append(result["text"].strip())
         os.remove(tmp_path)
+        print(f"Finished chunk {i + 1}/{num_chunks}")
+
 
     return " ".join(texts)
 
@@ -98,13 +107,15 @@ def main() -> None:
     args = parser.parse_args()
 
     prompt = _load_text(args.prompt_file)
-
+    print("Transcribing audio...")
     transcript = transcribe(args.audio, model_name=args.whisper_model)
+    print("Transcription complete.")
 
+    print("Summarizing transcript...")
     api_key = _load_text(API_KEY_FILE)
     summary_model = args.summary_model or _load_text(MODEL_FILE)
     summary = summarize(prompt, transcript, summary_model, api_key)
-
+    print("Summary complete.")
 
     with open(args.output, "w", encoding="utf-8") as f:
         f.write("# Summary\n\n")
