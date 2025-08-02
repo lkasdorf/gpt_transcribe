@@ -49,6 +49,7 @@ def transcribe(audio_path: str, model_name: str = "base") -> str:
         ) as tmp:
             tmp_path = tmp.name
         chunk.export(tmp_path, format=export_format)
+
         result = model.transcribe(tmp_path)
         texts.append(result["text"].strip())
         os.remove(tmp_path)
