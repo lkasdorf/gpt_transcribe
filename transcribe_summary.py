@@ -104,25 +104,27 @@ def strip_code_fences(text: str) -> str:
             lines = lines[:-1]
         return "\n".join(lines).strip()
     return text
-def transcribe(audio_path: str, model_name: str = "base") -> str:
-    """Transcribe an audio file using Whisper.
+def transcribe(audio_path: str, api_key: str, model_name: str = "whisper-1") -> str:
+    """Transcribe an audio file using the OpenAI API.
 
     If the audio file is larger than 25 MB it is split into multiple
-    segments using pydub before transcription.
+    segments using pydub before transcription. Language is detected
+    automatically by the API.
     """
 
-    import whisper
+    from openai import OpenAI
     from pydub import AudioSegment
 
     TEMP_DIR.mkdir(exist_ok=True)
+    client = OpenAI(api_key=api_key)
     try:
-        model = whisper.load_model(model_name)
-
         if os.path.getsize(audio_path) <= MAX_CHUNK_BYTES:
-            print("Transcribing whole file...")
-            # force FP32 on CPU to suppress FP16 warning
-            result = model.transcribe(audio_path, fp16=False)
-            return result["text"].strip()
+            print("Transcribing whole file via API...")
+            with open(audio_path, "rb") as f:
+                result = client.audio.transcriptions.create(
+                    model=model_name, file=f
+                )
+            return result.text.strip()
 
         audio_format = Path(audio_path).suffix.lstrip(".").lower()
         export_format = {"m4a": "mp4", "aac": "adts"}.get(audio_format, audio_format)
@@ -130,7 +132,7 @@ def transcribe(audio_path: str, model_name: str = "base") -> str:
         audio = AudioSegment.from_file(audio_path)
         num_chunks = math.ceil(os.path.getsize(audio_path) / MAX_CHUNK_BYTES)
         chunk_length_ms = len(audio) // num_chunks
-        print(f"Transcribing audio in {num_chunks} chunks...")
+        print(f"Transcribing audio in {num_chunks} chunks via API...")
 
         texts = []
         for i in range(num_chunks):
@@ -141,11 +143,13 @@ def transcribe(audio_path: str, model_name: str = "base") -> str:
                 suffix=f".{audio_format}", dir=TEMP_DIR, delete=False
             ) as tmp:
                 tmp_path = tmp.name
-            print(f"Transcribing chunk {i + 1}/{num_chunks}...")
+            print(f"Transcribing chunk {i + 1}/{num_chunks} via API...")
             chunk.export(tmp_path, format=export_format)
-            # force FP32 on CPU to suppress FP16 warning
-            result = model.transcribe(tmp_path, fp16=False)
-            texts.append(result["text"].strip())
+            with open(tmp_path, "rb") as f:
+                result = client.audio.transcriptions.create(
+                    model=model_name, file=f
+                )
+            texts.append(result.text.strip())
             os.remove(tmp_path)
             print(f"Finished chunk {i + 1}/{num_chunks}")
 
@@ -184,8 +188,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--whisper-model",
-        default="base",
-        help="Name of the Whisper model to use (default: base)",
+        default="whisper-1",
+        help="Name of the OpenAI transcription model to use (default: whisper-1)",
     )
 
     parser.add_argument(
@@ -196,12 +200,14 @@ def main() -> None:
     args = parser.parse_args()
 
     prompt = _load_text(args.prompt_file)
+    api_key = _load_text(API_KEY_FILE)
     print("Transcribing audio...")
-    transcript = transcribe(args.audio, model_name=args.whisper_model)
+    transcript = transcribe(
+        args.audio, api_key=api_key, model_name=args.whisper_model
+    )
     print("Transcription complete.")
 
     print("Summarizing transcript...")
-    api_key = _load_text(API_KEY_FILE)
     summary_model = args.summary_model or _load_text(MODEL_FILE)
     summary = summarize(prompt, transcript, summary_model, api_key)
     summary = strip_code_fences(summary)

@@ -39,13 +39,13 @@ def _append_processed(filename: str) -> None:
 def _process_file(path: Path) -> None:
     """Transcribe a single audio file and write its summary."""
     print(f"Transcribing {path.name}...")
-    transcript = transcribe_summary.transcribe(str(path))
+    api_key = transcribe_summary._load_text(
+        transcribe_summary.BASE_DIR / transcribe_summary.API_KEY_FILE
+    )
+    transcript = transcribe_summary.transcribe(str(path), api_key=api_key)
     print("Creating summary...")
     prompt = transcribe_summary._load_text(
         transcribe_summary.BASE_DIR / transcribe_summary.PROMPT_FILE
-    )
-    api_key = transcribe_summary._load_text(
-        transcribe_summary.BASE_DIR / transcribe_summary.API_KEY_FILE
     )
     summary_model = transcribe_summary._load_text(
         transcribe_summary.BASE_DIR / transcribe_summary.MODEL_FILE
