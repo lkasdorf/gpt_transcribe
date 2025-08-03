@@ -127,7 +127,6 @@ def main() -> None:
     method = args.method or config["general"].get("method", "api")
     language = args.language or config["general"].get("language", "en")
     print(f"Using model {whisper_model} via {'API' if method == 'api' else 'local'}")
-
     AUDIO_DIR.mkdir(exist_ok=True)
     OUTPUT_DIR.mkdir(exist_ok=True)
     processed = _load_processed()

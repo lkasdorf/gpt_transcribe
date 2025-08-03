@@ -30,10 +30,10 @@ pip install -r requirements.txt
 
 ```bash
 # Windows
-python transcribe_summary.py path\to\audio.mp3 output.md
+python transcribe_summary.py path\to\audio.mp3 output.md --method api --language en
 
 # Linux/macOS
-python3 transcribe_summary.py path/to/audio.mp3 output.md
+python3 transcribe_summary.py path/to/audio.mp3 output.md --method api --language en
 ```
 
 Use command-line flags to override the config file:
@@ -61,7 +61,7 @@ To process many audio files automatically, place them in the `audio` directory
 and run:
 
 ```bash
-python batch_transcribe.py
+python batch_transcribe.py --method api --language en
 ```
 
 `batch_transcribe.py` reads defaults from `config.cfg`. Use `--method` or `--language`

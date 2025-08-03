@@ -23,6 +23,7 @@ TEMP_DIR = BASE_DIR / "temp"
 
 CONFIG_FILE = "config.cfg"
 PROMPT_FILE = "summary_prompt.txt"
+WHISPER_MODEL_CONFIG = "whisper_config.txt"
 MAX_CHUNK_BYTES = 25 * 1024 * 1024
 
 
@@ -36,6 +37,16 @@ def load_config(path: Path = BASE_DIR / CONFIG_FILE) -> configparser.ConfigParse
     with open(path, "r", encoding="utf-8") as f:
         config.read_file(f)
     return config
+
+
+def load_whisper_model(config_path: Path = BASE_DIR / WHISPER_MODEL_CONFIG) -> str:
+    """Return the first uncommented model name from the config file."""
+    with open(config_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                return line
+    raise ValueError("No Whisper model selected in config file")
 
 
 def markdown_to_pdf(markdown_text: str, pdf_path: str) -> None:
@@ -223,6 +234,18 @@ def main() -> None:
         "--language",
         choices=["en", "de"],
         default=None,
+        help="Language for the generated summary (en or de)",
+    )
+    parser.add_argument(
+        "--method",
+        choices=["api", "local"],
+        default="api",
+        help="Transcription backend: 'api' for OpenAI API or 'local' for running Whisper locally",
+    )
+    parser.add_argument(
+        "--language",
+        choices=["en", "de"],
+        default="en",
         help="Language for the generated summary (en or de)",
     )
 
