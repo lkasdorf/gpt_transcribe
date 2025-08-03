@@ -169,9 +169,10 @@ def transcribe(audio_path: str, model_name: str, method: str, api_key: Optional[
             shutil.rmtree(TEMP_DIR, ignore_errors=True)
     else:
         import whisper
+        import torch
 
         model = whisper.load_model(model_name)
-        result = model.transcribe(audio_path)
+        result = model.transcribe(audio_path, fp16=torch.cuda.is_available())
         return result["text"].strip()
 
 
