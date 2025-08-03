@@ -38,17 +38,6 @@ def load_config(path: Path = BASE_DIR / CONFIG_FILE) -> configparser.ConfigParse
         config.read_file(f)
     return config
 
-
-def load_whisper_model(config_path: Path = BASE_DIR / WHISPER_MODEL_CONFIG) -> str:
-    """Return the first uncommented model name from the config file."""
-    with open(config_path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                return line
-    raise ValueError("No Whisper model selected in config file")
-
-
 def markdown_to_pdf(markdown_text: str, pdf_path: str) -> None:
     """Convert Markdown text to a PDF file with bookmarks."""
     styles = getSampleStyleSheet()
@@ -236,31 +225,18 @@ def main() -> None:
         default=None,
         help="Language for the generated summary (en or de)",
     )
-    parser.add_argument(
-        "--method",
-        choices=["api", "local"],
-        default="api",
-        help="Transcription backend: 'api' for OpenAI API or 'local' for running Whisper locally",
-    )
-    parser.add_argument(
-        "--language",
-        choices=["en", "de"],
-        default="en",
-        help="Language for the generated summary (en or de)",
-    )
 
     args = parser.parse_args()
 
     config = load_config()
     prompt = _load_text(args.prompt_file)
-    whisper_model = config["whisper"]["model"]
-    api_key = config["openai"]["api_key"]
     method = args.method or config["general"].get("method", "api")
     language = args.language or config["general"].get("language", "en")
     summary_model = args.summary_model or config["openai"]["summary_model"]
-    print(
-        f"Using model {whisper_model} via {'API' if method == 'api' else 'local'}"
-    )
+    api_key = config["openai"]["api_key"]
+    whisper_section = "whisper_api" if method == "api" else "whisper_local"
+    whisper_model = config[whisper_section]["model"]
+    print(f"Using model {whisper_model} via {'API' if method == 'api' else 'local'}")
     print("Transcribing audio...")
     transcript = transcribe(
         args.audio,

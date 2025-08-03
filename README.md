@@ -22,7 +22,7 @@ pip install -r requirements.txt
 1. Copy `config.template.cfg` to `config.cfg` and edit it:
    - Set `api_key` with your OpenAI API key
    - Choose the default transcription `method` (`api` or `local`) and summary `language`
-   - Select a Whisper model by uncommenting one line in the `[whisper]` section
+   - Pick Whisper models for API and local runs by uncommenting one line in the `[whisper_api]` and `[whisper_local]` sections
    - Optionally adjust the chat `summary_model`
    `config.cfg` is ignored by git so your API key stays private.
 2. Create `summary_prompt.txt` containing the prompt for the summary.

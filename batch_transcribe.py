@@ -121,12 +121,16 @@ def main() -> None:
     args = parser.parse_args()
 
     config = transcribe_summary.load_config()
-    whisper_model = config["whisper"]["model"]
-    api_key = config["openai"]["api_key"]
-    summary_model = config["openai"]["summary_model"]
+
     method = args.method or config["general"].get("method", "api")
     language = args.language or config["general"].get("language", "en")
+    api_key = config["openai"]["api_key"]
+    summary_model = config["openai"]["summary_model"]
+    whisper_section = "whisper_api" if method == "api" else "whisper_local"
+    whisper_model = config[whisper_section]["model"]
     print(f"Using model {whisper_model} via {'API' if method == 'api' else 'local'}")
+
+
     AUDIO_DIR.mkdir(exist_ok=True)
     OUTPUT_DIR.mkdir(exist_ok=True)
     processed = _load_processed()
