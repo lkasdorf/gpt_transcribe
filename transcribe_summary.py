@@ -23,6 +23,7 @@ TEMP_DIR = BASE_DIR / "temp"
 
 CONFIG_FILE = "config.cfg"
 PROMPT_FILE = "summary_prompt.txt"
+WHISPER_MODEL_CONFIG = "whisper_config.txt"
 MAX_CHUNK_BYTES = 25 * 1024 * 1024
 
 
@@ -36,7 +37,6 @@ def load_config(path: Path = BASE_DIR / CONFIG_FILE) -> configparser.ConfigParse
     with open(path, "r", encoding="utf-8") as f:
         config.read_file(f)
     return config
-
 
 def markdown_to_pdf(markdown_text: str, pdf_path: str) -> None:
     """Convert Markdown text to a PDF file with bookmarks."""
