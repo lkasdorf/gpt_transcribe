@@ -19,12 +19,14 @@ pip install -r requirements.txt
 ```
 
 ## Usage
-1. Create `openai_api_key.txt` containing your OpenAI API key (this file is ignored by git).
-2. Optionally create `openai_model.txt` specifying the chat model (e.g., `gpt-3.5-turbo`).
-3. Edit `whisper_config.txt` and uncomment the Whisper model you want to use. The file lists
-   available API models (e.g., `whisper-1`) and local models (e.g., `base`, `small`).
-4. Create `summary_prompt.txt` containing the prompt for the summary.
-5. Run the script:
+1. Copy `config.template.cfg` to `config.cfg` and edit it:
+   - Set `api_key` with your OpenAI API key
+   - Choose the default transcription `method` (`api` or `local`) and summary `language`
+   - Select a Whisper model by uncommenting one line in the `[whisper]` section
+   - Optionally adjust the chat `summary_model`
+   `config.cfg` is ignored by git so your API key stays private.
+2. Create `summary_prompt.txt` containing the prompt for the summary.
+3. Run the script:
 
 ```bash
 # Windows
@@ -34,7 +36,7 @@ python transcribe_summary.py path\to\audio.mp3 output.md --method api --language
 python3 transcribe_summary.py path/to/audio.mp3 output.md --method api --language en
 ```
 
-To run Whisper locally or change the output language:
+Use command-line flags to override the config file:
 
 ```bash
 # Local transcription with German summary
@@ -61,6 +63,9 @@ and run:
 ```bash
 python batch_transcribe.py --method api --language en
 ```
+
+`batch_transcribe.py` reads defaults from `config.cfg`. Use `--method` or `--language`
+to override them if needed.
 
 Summaries will be written to the `output` directory with filenames in the
 form `YYYYMMDD_NameOfTheFile.md` and a matching `.pdf` file. Successfully

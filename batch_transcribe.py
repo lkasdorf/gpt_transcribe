@@ -55,14 +55,16 @@ def _append_processed(
         )
 
 
-def _process_file(path: Path, method: str, language: str, whisper_model: str) -> None:
+def _process_file(
+    path: Path,
+    method: str,
+    language: str,
+    whisper_model: str,
+    api_key: str,
+    summary_model: str,
+) -> None:
     """Transcribe a single audio file and write its summary."""
-    print(
-        f"Transcribing {path.name} using {whisper_model} via {method}..."
-    )
-    api_key = transcribe_summary._load_text(
-        transcribe_summary.BASE_DIR / transcribe_summary.API_KEY_FILE
-    )
+    print(f"Transcribing {path.name} using {whisper_model} via {method}...")
 
     size_bytes = path.stat().st_size
     audio = AudioSegment.from_file(path)
@@ -79,9 +81,6 @@ def _process_file(path: Path, method: str, language: str, whisper_model: str) ->
     print("Creating summary...")
     prompt = transcribe_summary._load_text(
         transcribe_summary.BASE_DIR / transcribe_summary.PROMPT_FILE
-    )
-    summary_model = transcribe_summary._load_text(
-        transcribe_summary.BASE_DIR / transcribe_summary.MODEL_FILE
     )
     summary = transcribe_summary.summarize(
         prompt, transcript, summary_model, api_key, language
@@ -102,6 +101,7 @@ def _process_file(path: Path, method: str, language: str, whisper_model: str) ->
     print(f"Finished: {output_path}")
     print(f"PDF saved to {pdf_path}")
 
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Batch transcribe audio files and summarize them."
@@ -109,19 +109,24 @@ def main() -> None:
     parser.add_argument(
         "--method",
         choices=["api", "local"],
-        default="api",
+        default=None,
         help="Transcription backend: 'api' or 'local'",
     )
     parser.add_argument(
         "--language",
         choices=["en", "de"],
-        default="en",
+        default=None,
         help="Language for the generated summaries",
     )
     args = parser.parse_args()
 
-    whisper_model = transcribe_summary.load_whisper_model()
-
+    config = transcribe_summary.load_config()
+    whisper_model = config["whisper"]["model"]
+    api_key = config["openai"]["api_key"]
+    summary_model = config["openai"]["summary_model"]
+    method = args.method or config["general"].get("method", "api")
+    language = args.language or config["general"].get("language", "en")
+    print(f"Using model {whisper_model} via {'API' if method == 'api' else 'local'}")
     AUDIO_DIR.mkdir(exist_ok=True)
     OUTPUT_DIR.mkdir(exist_ok=True)
     processed = _load_processed()
@@ -133,7 +138,7 @@ def main() -> None:
         if audio_file.name in processed:
             print(f"{audio_file.name} has already been processed.")
             continue
-        _process_file(audio_file, args.method, args.language, whisper_model)
+        _process_file(audio_file, method, language, whisper_model, api_key, summary_model)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import argparse
+import configparser
 import math
 import os
 import shutil
@@ -20,8 +21,7 @@ from reportlab.platypus import (
 BASE_DIR = Path(__file__).resolve().parent
 TEMP_DIR = BASE_DIR / "temp"
 
-API_KEY_FILE = "openai_api_key.txt"
-MODEL_FILE = "openai_model.txt"
+CONFIG_FILE = "config.cfg"
 PROMPT_FILE = "summary_prompt.txt"
 WHISPER_MODEL_CONFIG = "whisper_config.txt"
 MAX_CHUNK_BYTES = 25 * 1024 * 1024
@@ -30,6 +30,13 @@ MAX_CHUNK_BYTES = 25 * 1024 * 1024
 def _load_text(path: str) -> str:
     with open(path, "r", encoding="utf-8") as f:
         return f.read().strip()
+
+def load_config(path: Path = BASE_DIR / CONFIG_FILE) -> configparser.ConfigParser:
+    """Load configuration from an INI file."""
+    config = configparser.ConfigParser()
+    with open(path, "r", encoding="utf-8") as f:
+        config.read_file(f)
+    return config
 
 
 def load_whisper_model(config_path: Path = BASE_DIR / WHISPER_MODEL_CONFIG) -> str:
@@ -215,7 +222,19 @@ def main() -> None:
     )
     parser.add_argument(
         "--summary-model",
-        help="Model to use for summarization (overrides openai_model.txt)",
+        help="Model to use for summarization (overrides config file)",
+    )
+    parser.add_argument(
+        "--method",
+        choices=["api", "local"],
+        default=None,
+        help="Transcription backend: 'api' for OpenAI API or 'local' for running Whisper locally",
+    )
+    parser.add_argument(
+        "--language",
+        choices=["en", "de"],
+        default=None,
+        help="Language for the generated summary (en or de)",
     )
     parser.add_argument(
         "--method",
@@ -232,28 +251,31 @@ def main() -> None:
 
     args = parser.parse_args()
 
+    config = load_config()
     prompt = _load_text(args.prompt_file)
-    whisper_model = load_whisper_model()
-    api_key = _load_text(API_KEY_FILE)
+    whisper_model = config["whisper"]["model"]
+    api_key = config["openai"]["api_key"]
+    method = args.method or config["general"].get("method", "api")
+    language = args.language or config["general"].get("language", "en")
+    summary_model = args.summary_model or config["openai"]["summary_model"]
     print(
-        f"Using model {whisper_model} via {'API' if args.method == 'api' else 'local'}"
+        f"Using model {whisper_model} via {'API' if method == 'api' else 'local'}"
     )
     print("Transcribing audio...")
     transcript = transcribe(
         args.audio,
         model_name=whisper_model,
-        method=args.method,
-        api_key=api_key if args.method == "api" else None,
+        method=method,
+        api_key=api_key if method == "api" else None,
     )
     print("Transcription complete.")
 
     print("Summarizing transcript...")
-    summary_model = args.summary_model or _load_text(MODEL_FILE)
-    summary = summarize(prompt, transcript, summary_model, api_key, args.language)
+    summary = summarize(prompt, transcript, summary_model, api_key, language)
     summary = strip_code_fences(summary)
     print("Summary complete.")
 
-    heading = "Summary" if args.language == "en" else "Zusammenfassung"
+    heading = "Summary" if language == "en" else "Zusammenfassung"
     markdown_content = f"# {heading}\n\n" + summary + "\n"
     with open(args.output, "w", encoding="utf-8") as f:
         f.write(markdown_content)
