@@ -4,6 +4,7 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -22,12 +23,23 @@ TEMP_DIR = BASE_DIR / "temp"
 API_KEY_FILE = "openai_api_key.txt"
 MODEL_FILE = "openai_model.txt"
 PROMPT_FILE = "summary_prompt.txt"
+WHISPER_MODEL_CONFIG = "whisper_config.txt"
 MAX_CHUNK_BYTES = 25 * 1024 * 1024
 
 
 def _load_text(path: str) -> str:
     with open(path, "r", encoding="utf-8") as f:
         return f.read().strip()
+
+
+def load_whisper_model(config_path: Path = BASE_DIR / WHISPER_MODEL_CONFIG) -> str:
+    """Return the first uncommented model name from the config file."""
+    with open(config_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                return line
+    raise ValueError("No Whisper model selected in config file")
 
 
 def markdown_to_pdf(markdown_text: str, pdf_path: str) -> None:
@@ -104,68 +116,83 @@ def strip_code_fences(text: str) -> str:
             lines = lines[:-1]
         return "\n".join(lines).strip()
     return text
-def transcribe(audio_path: str, api_key: str, model_name: str = "whisper-1") -> str:
-    """Transcribe an audio file using the OpenAI API.
+def transcribe(audio_path: str, model_name: str, method: str, api_key: Optional[str] = None) -> str:
+    """Transcribe an audio file either locally or via the OpenAI API.
 
-    If the audio file is larger than 25 MB it is split into multiple
-    segments using pydub before transcription. Language is detected
+    If the audio file is larger than 25 MB and the API is used it is split into
+    multiple segments using pydub before transcription. Language is detected
     automatically by the API.
     """
 
-    from openai import OpenAI
-    from pydub import AudioSegment
+    if method == "api":
+        if api_key is None:
+            raise ValueError("API key required for API transcription")
+        from openai import OpenAI
+        from pydub import AudioSegment
 
-    TEMP_DIR.mkdir(exist_ok=True)
-    client = OpenAI(api_key=api_key)
-    try:
-        if os.path.getsize(audio_path) <= MAX_CHUNK_BYTES:
-            print("Transcribing whole file via API...")
-            with open(audio_path, "rb") as f:
-                result = client.audio.transcriptions.create(
-                    model=model_name, file=f
-                )
-            return result.text.strip()
+        TEMP_DIR.mkdir(exist_ok=True)
+        client = OpenAI(api_key=api_key)
+        try:
+            if os.path.getsize(audio_path) <= MAX_CHUNK_BYTES:
+                print("Transcribing whole file via API...")
+                with open(audio_path, "rb") as f:
+                    result = client.audio.transcriptions.create(
+                        model=model_name, file=f
+                    )
+                return result.text.strip()
 
-        audio_format = Path(audio_path).suffix.lstrip(".").lower()
-        export_format = {"m4a": "mp4", "aac": "adts"}.get(audio_format, audio_format)
+            audio_format = Path(audio_path).suffix.lstrip(".").lower()
+            export_format = {"m4a": "mp4", "aac": "adts"}.get(audio_format, audio_format)
 
-        audio = AudioSegment.from_file(audio_path)
-        num_chunks = math.ceil(os.path.getsize(audio_path) / MAX_CHUNK_BYTES)
-        chunk_length_ms = len(audio) // num_chunks
-        print(f"Transcribing audio in {num_chunks} chunks via API...")
+            audio = AudioSegment.from_file(audio_path)
+            num_chunks = math.ceil(os.path.getsize(audio_path) / MAX_CHUNK_BYTES)
+            chunk_length_ms = len(audio) // num_chunks
+            print(f"Transcribing audio in {num_chunks} chunks via API...")
 
-        texts = []
-        for i in range(num_chunks):
-            start_ms = i * chunk_length_ms
-            end_ms = min((i + 1) * chunk_length_ms, len(audio))
-            chunk = audio[start_ms:end_ms]
-            with tempfile.NamedTemporaryFile(
-                suffix=f".{audio_format}", dir=TEMP_DIR, delete=False
-            ) as tmp:
-                tmp_path = tmp.name
-            print(f"Transcribing chunk {i + 1}/{num_chunks} via API...")
-            chunk.export(tmp_path, format=export_format)
-            with open(tmp_path, "rb") as f:
-                result = client.audio.transcriptions.create(
-                    model=model_name, file=f
-                )
-            texts.append(result.text.strip())
-            os.remove(tmp_path)
-            print(f"Finished chunk {i + 1}/{num_chunks}")
+            texts = []
+            for i in range(num_chunks):
+                start_ms = i * chunk_length_ms
+                end_ms = min((i + 1) * chunk_length_ms, len(audio))
+                chunk = audio[start_ms:end_ms]
+                with tempfile.NamedTemporaryFile(
+                    suffix=f".{audio_format}", dir=TEMP_DIR, delete=False
+                ) as tmp:
+                    tmp_path = tmp.name
+                print(f"Transcribing chunk {i + 1}/{num_chunks} via API...")
+                chunk.export(tmp_path, format=export_format)
+                with open(tmp_path, "rb") as f:
+                    result = client.audio.transcriptions.create(
+                        model=model_name, file=f
+                    )
+                texts.append(result.text.strip())
+                os.remove(tmp_path)
+                print(f"Finished chunk {i + 1}/{num_chunks}")
 
-        return " ".join(texts)
-    finally:
-        shutil.rmtree(TEMP_DIR, ignore_errors=True)
+            return " ".join(texts)
+        finally:
+            shutil.rmtree(TEMP_DIR, ignore_errors=True)
+    else:
+        import whisper
+
+        model = whisper.load_model(model_name)
+        result = model.transcribe(audio_path)
+        return result["text"].strip()
 
 
-def summarize(prompt: str, transcript: str, model_name: str, api_key: str) -> str:
+def summarize(
+    prompt: str, transcript: str, model_name: str, api_key: str, language: str
+) -> str:
     """Generate a summary of the transcript using a chat model."""
     from openai import OpenAI
 
     client = OpenAI(api_key=api_key)
 
+    lang_text = "English" if language == "en" else "German"
     messages = [
-        {"role": "system", "content": "You are a helpful assistant."},
+        {
+            "role": "system",
+            "content": f"You are a helpful assistant that writes in {lang_text}.",
+        },
         {
             "role": "user",
             "content": f"{prompt}\n\nTranscript:\n{transcript}",
@@ -187,33 +214,47 @@ def main() -> None:
         help="File containing the summary prompt (default: summary_prompt.txt)",
     )
     parser.add_argument(
-        "--whisper-model",
-        default="whisper-1",
-        help="Name of the OpenAI transcription model to use (default: whisper-1)",
-    )
-
-    parser.add_argument(
         "--summary-model",
         help="Model to use for summarization (overrides openai_model.txt)",
+    )
+    parser.add_argument(
+        "--method",
+        choices=["api", "local"],
+        default="api",
+        help="Transcription backend: 'api' for OpenAI API or 'local' for running Whisper locally",
+    )
+    parser.add_argument(
+        "--language",
+        choices=["en", "de"],
+        default="en",
+        help="Language for the generated summary (en or de)",
     )
 
     args = parser.parse_args()
 
     prompt = _load_text(args.prompt_file)
+    whisper_model = load_whisper_model()
     api_key = _load_text(API_KEY_FILE)
+    print(
+        f"Using model {whisper_model} via {'API' if args.method == 'api' else 'local'}"
+    )
     print("Transcribing audio...")
     transcript = transcribe(
-        args.audio, api_key=api_key, model_name=args.whisper_model
+        args.audio,
+        model_name=whisper_model,
+        method=args.method,
+        api_key=api_key if args.method == "api" else None,
     )
     print("Transcription complete.")
 
     print("Summarizing transcript...")
     summary_model = args.summary_model or _load_text(MODEL_FILE)
-    summary = summarize(prompt, transcript, summary_model, api_key)
+    summary = summarize(prompt, transcript, summary_model, api_key, args.language)
     summary = strip_code_fences(summary)
     print("Summary complete.")
 
-    markdown_content = "# Summary\n\n" + summary + "\n"
+    heading = "Summary" if args.language == "en" else "Zusammenfassung"
+    markdown_content = f"# {heading}\n\n" + summary + "\n"
     with open(args.output, "w", encoding="utf-8") as f:
         f.write(markdown_content)
 
