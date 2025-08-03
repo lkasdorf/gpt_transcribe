@@ -1,3 +1,5 @@
 openai>=1.0.0
 pydub
 reportlab
+
+openai-whisper
