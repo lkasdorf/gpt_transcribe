@@ -19,10 +19,14 @@ pip install -r requirements.txt
 ```
 
 ## Usage
-1. Create `openai_api_key.txt` containing your OpenAI API key (this file is ignored by git).
-2. Optionally create `openai_model.txt` specifying the chat model (e.g., `gpt-3.5-turbo`).
-3. Create `summary_prompt.txt` containing the prompt for the summary.
-4. Run the script:
+1. Copy `config.template.cfg` to `config.cfg` and edit it:
+   - Set `api_key` with your OpenAI API key
+   - Choose the default transcription `method` (`api` or `local`) and summary `language`
+   - Pick Whisper models for API and local runs by uncommenting one line in the `[whisper_api]` and `[whisper_local]` sections
+   - Optionally adjust the chat `summary_model`
+   `config.cfg` is ignored by git so your API key stays private.
+2. Create `summary_prompt.txt` containing the prompt for the summary.
+3. Run the script:
 
 ```bash
 # Windows
@@ -32,23 +36,23 @@ python transcribe_summary.py path\to\audio.mp3 output.md
 python3 transcribe_summary.py path/to/audio.mp3 output.md
 ```
 
-Optionally select different models or prompt:
+Use command-line flags to override the config file:
 
 ```bash
-# Windows (use ^ for line continuation)
-python transcribe_summary.py audio.m4a summary.md ^
-  --whisper-model base --summary-model gpt-3.5-turbo ^
-  --prompt-file other_prompt.txt
+# Local transcription with German summary
+python3 transcribe_summary.py audio.m4a summary.md --method local --language de
 
-# Linux/macOS
+# Custom prompt and summary model
 python3 transcribe_summary.py audio.m4a summary.md \
-  --whisper-model base --summary-model gpt-3.5-turbo \
+  --summary-model gpt-3.5-turbo \
   --prompt-file other_prompt.txt
 ```
 
-Large MP3 or m4a files over 25 MB are automatically split into smaller chunks before transcription.
+Large MP3 or m4a files over 25 MB are automatically split into smaller chunks before
+API transcription.
 
-The summary will be written to the specified Markdown file and an accompanying
+When executed the script prints which model is used and whether transcription happens
+locally or via the API. The summary will be written to the specified Markdown file and an accompanying
 PDF file with bookmarks.
 
 ## Batch transcription
@@ -60,7 +64,11 @@ and run:
 python batch_transcribe.py
 ```
 
+`batch_transcribe.py` reads defaults from `config.cfg`. Use `--method` or `--language`
+to override them if needed.
+
 Summaries will be written to the `output` directory with filenames in the
 form `YYYYMMDD_NameOfTheFile.md` and a matching `.pdf` file. Successfully
-
-processed audio files are tracked in `processed.log` to avoid duplicate work.
+processed audio files are tracked in `processed.log` along with file size,
+duration, transcription method, transcription time and timestamp to avoid
+duplicate work.
