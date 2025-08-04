@@ -6,7 +6,7 @@ set -e
 APP_NAME="GPT_Transcribe"
 DISPLAY_NAME="GPT Transcribe"
 MAIN_SCRIPT="gui.py"
-ICON_SOURCE="Logo/logo.png"
+ICON_SOURCE="logo/logo.png"
 ICON_NAME="gpt_transcribe.png"
 APPIMAGETOOL="appimagetool-x86_64.AppImage"
 APPIMAGETOOL_URL="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
