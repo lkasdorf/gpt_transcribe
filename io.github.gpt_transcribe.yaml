@@ -35,7 +35,7 @@ modules:
       - install -Dm644 summary_prompt.txt /app/bin/summary_prompt.txt
       - install -Dm644 config.template.cfg /app/bin/config.template.cfg
       - install -Dm644 README.md /app/bin/README.md
-      - install -Dm644 logo/logo.png /app/share/icons/hicolor/256x256/apps/io.github.gpt_transcribe.png
+      - install -Dm644 logo/logo-256.png /app/share/icons/hicolor/256x256/apps/io.github.gpt_transcribe.png
     sources:
       - type: dir
         path: .
