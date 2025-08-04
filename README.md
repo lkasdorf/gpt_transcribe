@@ -23,6 +23,7 @@ pip install -r requirements.txt
    - Edit `config.cfg` to set `api_key`, choose the transcription `method` and summary `language`,
      and pick Whisper models in the `[whisper_api]` and `[whisper_local]` sections.
    - The default summary prompt is stored in `summary_prompt.txt` and can be customized.
+   - On Linux these files reside in `~/.config/GTP_Transcribe`.
    `config.cfg` is ignored by git so your API key stays private.
 2. Run the script:
 
@@ -84,6 +85,19 @@ Whisper models or the summary prompt can be edited in the window and saved back 
 respective files. When an audio file is selected and transcribed, a Markdown file and
 matching PDF are written to the chosen location.
 
+## Compiling the program
+
+Use [PyInstaller](https://pyinstaller.org/) to create a standalone executable. Include the
+template config and prompt so the application can recreate defaults on first run:
+
+```bash
+# adjust the path separator for your platform (; on Windows, : on Linux/macOS)
+pyinstaller gui.py --name gpt_transcribe --noconsole --onefile \
+  --add-data "config.template.cfg:." --add-data "summary_prompt.txt:."
+```
+
+The resulting binary in `dist/` can be executed directly or packaged as shown below.
+
 ## Creating a Windows installer and GitHub release
 
 1. Install PyInstaller:
@@ -121,4 +135,35 @@ matching PDF are written to the chosen location.
 4. Create the AppImage:
    ```bash
    ./appimagetool gpt_transcribe.AppDir gpt_transcribe.AppImage
+   ```
+
+## Creating a Flatpak
+
+1. Install `flatpak` and `flatpak-builder` on your system.
+2. Build the application with PyInstaller including the config template and prompt:
+   ```bash
+   pyinstaller gui.py --name gpt_transcribe --noconsole \
+     --add-data "config.template.cfg:." --add-data "summary_prompt.txt:."
+   ```
+3. Create a Flatpak manifest `io.github.gpt_transcribe.yaml` that installs the
+   PyInstaller output. A minimal example:
+   ```yaml
+   app-id: io.github.gpt_transcribe
+   runtime: org.freedesktop.Platform
+   runtime-version: "23.08"
+   sdk: org.freedesktop.Sdk
+   command: gpt_transcribe
+   modules:
+     - name: gpt_transcribe
+       buildsystem: simple
+       build-commands:
+         - install -Dm755 dist/gpt_transcribe /app/bin/gpt_transcribe
+       sources:
+         - type: dir
+           path: dist
+   ```
+4. Build and bundle the Flatpak:
+   ```bash
+   flatpak-builder --force-clean build-dir io.github.gpt_transcribe.yaml
+   flatpak build-bundle build-dir gpt_transcribe.flatpak io.github.gpt_transcribe
    ```

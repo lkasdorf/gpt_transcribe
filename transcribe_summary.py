@@ -2,6 +2,7 @@ import argparse
 import configparser
 import math
 import os
+import platform
 import shutil
 import sys
 import tempfile
@@ -22,9 +23,15 @@ from reportlab.platypus import (
 # Paths for bundled resources and user-modifiable files
 if hasattr(sys, "_MEIPASS"):
     RESOURCE_DIR = Path(sys._MEIPASS)
-    BASE_DIR = Path(sys.executable).resolve().parent
 else:
-    RESOURCE_DIR = BASE_DIR = Path(__file__).resolve().parent
+    RESOURCE_DIR = Path(__file__).resolve().parent
+
+if platform.system() == "Linux":
+    BASE_DIR = Path.home() / ".config" / "GTP_Transcribe"
+    BASE_DIR.mkdir(parents=True, exist_ok=True)
+else:
+    BASE_DIR = RESOURCE_DIR
+
 TEMP_DIR = BASE_DIR / "temp"
 
 CONFIG_FILE = "config.cfg"
@@ -61,8 +68,12 @@ DEFAULT_PROMPT = (
     "## sentiment\n\n"
     "positive"
 )
-WHISPER_MODEL_CONFIG = "whisper_config.txt"
 MAX_CHUNK_BYTES = 25 * 1024 * 1024
+
+
+def check_ffmpeg() -> bool:
+    """Return True if ffmpeg is available on the system path."""
+    return shutil.which("ffmpeg") is not None
 
 
 def _load_text(path: Path) -> str:
@@ -280,6 +291,12 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+
+    if not check_ffmpeg():
+        print(
+            "Warning: ffmpeg is not installed or not found in PATH.",
+            file=sys.stderr,
+        )
 
     config = load_config()
     prompt_path = ensure_prompt(Path(args.prompt_file))
