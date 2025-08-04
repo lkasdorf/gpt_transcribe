@@ -12,11 +12,31 @@ The script runs on both Linux and Windows.
 3. (Optional) Create and activate a virtual environment:
    - Linux/macOS: `python3 -m venv .venv && source .venv/bin/activate`
    - Windows: `python -m venv .venv && .venv\Scripts\activate`
-4. Install Python dependencies:
+4. Install Python dependencies before running the program. All required packages
+   are listed in `requirements.txt` and need to be available on the system –
+   they are no longer bundled with the application.
+
+### Linux
 
 ```bash
+sudo apt update && sudo apt install python3-venv ffmpeg
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+### Windows
+
+```powershell
+REM Install Python 3.8+ and make sure pip is available
+REM Install ffmpeg and add it to PATH
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+When `openai-whisper` is installed it will pull in the CPU build of PyTorch by
+default. If you prefer a GPU-enabled build, install PyTorch separately from
+<https://pytorch.org/> before running `pip install -r requirements.txt`.
 
 ## Usage
 1. On first launch the program creates `config.cfg` and `summary_prompt.txt` from bundled defaults.
