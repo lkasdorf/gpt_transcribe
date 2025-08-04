@@ -20,7 +20,13 @@ class TranscribeGUI:
         master.title("gpt_transcribe")
         master.resizable(False, False)
 
-        self.config = transcribe_summary.load_config(CONFIG_PATH)
+        try:
+            self.config = transcribe_summary.load_config(CONFIG_PATH)
+        except FileNotFoundError as e:
+            messagebox.showerror("Configuration", str(e))
+            master.destroy()
+            return
+        transcribe_summary.ensure_prompt(PROMPT_PATH)
         prompt_text = transcribe_summary._load_text(PROMPT_PATH)
 
         # Configuration fields
