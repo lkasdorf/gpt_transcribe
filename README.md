@@ -119,40 +119,26 @@ The resulting binary in `dist/` can be executed directly or packaged as shown be
 
 ## Creating a Windows installer and GitHub release
 
-1. Install PyInstaller:
-   ```bash
-   pip install pyinstaller
-   ```
-2. Install [Inno Setup](https://jrsoftware.org/isinfo.php) and ensure `iscc.exe` is in your `PATH`.
-3. Run the helper script that builds the executable and compiles the installer:
+1. Install [Inno Setup](https://jrsoftware.org/isinfo.php) and ensure `iscc.exe` is in your `PATH`.
+2. Run the helper script that installs dependencies, builds the executable and compiles the installer:
    ```bat
    build_windows.bat
    ```
-   This creates `dist\gpt_transcribe.exe` and `gpt_transcribe_setup.exe`.
-4. Commit and push your changes, then create a GitHub release. Upload the generated
+   The script installs packages from `requirements.txt`, installs PyInstaller and
+   creates `dist\gpt_transcribe.exe` and `gpt_transcribe_setup.exe`.
+3. Commit and push your changes, then create a GitHub release. Upload the generated
    installer or `dist\gpt_transcribe.exe` so others can download it.
 
 ## Creating a Linux AppImage
 
-A helper script `build_appimage.sh` automates the following steps.
+A helper script `build_appimage.sh` builds an AppImage with all Python dependencies.
 
-1. Install PyInstaller and download [AppImageTool](https://github.com/AppImage/AppImageKit/releases).
-   ```bash
-   pip install pyinstaller
-   ```
-2. Build the application directory with bundled defaults:
-   ```bash
-   pyinstaller gui.py --name gpt_transcribe --noconsole --onefile --add-data "config.template.cfg:." --add-data "summary_prompt.txt:." --add-data "README.md:." --icon logo/logo.ico
-   ```
-3. Rename the folder and add metadata:
-   ```bash
-   mv dist/gpt_transcribe gpt_transcribe.AppDir
-   # add gpt_transcribe.desktop and an icon inside gpt_transcribe.AppDir
-   ```
-4. Create the AppImage:
-   ```bash
-   ./appimagetool gpt_transcribe.AppDir gpt_transcribe.AppImage
-   ```
+```bash
+./build_appimage.sh
+```
+
+The script installs packages from `requirements.txt`, installs PyInstaller and
+downloads `appimagetool` if needed. The resulting AppImage is placed in `dist/`.
 
 ## Creating a Flatpak
 
