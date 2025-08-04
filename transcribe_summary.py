@@ -3,6 +3,7 @@ import configparser
 import math
 import os
 import shutil
+import sys
 import tempfile
 from pathlib import Path
 from typing import Optional
@@ -18,21 +19,40 @@ from reportlab.platypus import (
     Spacer,
 )
 
-BASE_DIR = Path(__file__).resolve().parent
+# Paths for bundled resources and user-modifiable files
+if hasattr(sys, "_MEIPASS"):
+    RESOURCE_DIR = Path(sys._MEIPASS)
+    BASE_DIR = Path(sys.executable).resolve().parent
+else:
+    RESOURCE_DIR = BASE_DIR = Path(__file__).resolve().parent
 TEMP_DIR = BASE_DIR / "temp"
 
 CONFIG_FILE = "config.cfg"
+CONFIG_TEMPLATE = "config.template.cfg"
 PROMPT_FILE = "summary_prompt.txt"
 WHISPER_MODEL_CONFIG = "whisper_config.txt"
 MAX_CHUNK_BYTES = 25 * 1024 * 1024
 
 
-def _load_text(path: str) -> str:
+def _load_text(path: Path) -> str:
     with open(path, "r", encoding="utf-8") as f:
         return f.read().strip()
 
+
+def ensure_prompt(path: Path = BASE_DIR / PROMPT_FILE) -> Path:
+    """Ensure the summary prompt file exists and return its path."""
+    if not path.exists():
+        shutil.copy(RESOURCE_DIR / PROMPT_FILE, path)
+    return path
+
+
 def load_config(path: Path = BASE_DIR / CONFIG_FILE) -> configparser.ConfigParser:
-    """Load configuration from an INI file."""
+    """Load configuration from an INI file, creating it from a template if missing."""
+    if not path.exists():
+        shutil.copy(RESOURCE_DIR / CONFIG_TEMPLATE, path)
+        raise FileNotFoundError(
+            f"{path} was created. Please add your API key and restart the program."
+        )
     config = configparser.ConfigParser()
     with open(path, "r", encoding="utf-8") as f:
         config.read_file(f)
@@ -230,7 +250,8 @@ def main() -> None:
     args = parser.parse_args()
 
     config = load_config()
-    prompt = _load_text(args.prompt_file)
+    prompt_path = ensure_prompt(Path(args.prompt_file))
+    prompt = _load_text(prompt_path)
     method = args.method or config["general"].get("method", "api")
     language = args.language or config["general"].get("language", "en")
     summary_model = args.summary_model or config["openai"]["summary_model"]
