@@ -93,7 +93,12 @@ echo "✅ Fertig: AppImage erstellt unter ${OUTPUT_APPIMAGE}"
 
 # === Flatpak erstellen ===
 echo "📦 Erstelle Flatpak ..."
-flatpak-builder --repo=repo --force-clean build-dir ${FLATPAK_MANIFEST}
+flatpak-builder \
+    --repo=repo \
+    --force-clean \
+    --delete-build-dirs \
+    --disable-cache \
+    build-dir ${FLATPAK_MANIFEST}
 flatpak build-bundle repo gpt_transcribe.flatpak io.github.gpt_transcribe
 echo "✅ Fertig: Flatpak erstellt unter gpt_transcribe.flatpak"
 
