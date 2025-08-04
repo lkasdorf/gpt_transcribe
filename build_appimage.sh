@@ -29,10 +29,8 @@ fi
 echo "🧹 Entferne alte Builds ..."
 rm -rf build/ dist/ ${APPDIR} __pycache__ *.spec
 
-# === Abhängigkeiten installieren ===
-echo "📦 Installiere Python-Abhängigkeiten ..."
-pip install -r requirements.txt
-pip install pyinstaller
+# === Abhängigkeiten voraussetzen ===
+echo "ℹ️  Python-Abhängigkeiten und PyInstaller müssen bereits installiert sein."
 
 # === Kompilieren mit PyInstaller ===
 echo "⚙️  Baue das Python-Programm mit PyInstaller ..."
