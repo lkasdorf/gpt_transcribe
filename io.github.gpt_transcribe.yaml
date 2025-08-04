@@ -1,0 +1,38 @@
+app-id: io.github.gpt_transcribe
+runtime: org.freedesktop.Platform
+runtime-version: "23.08"
+sdk: org.freedesktop.Sdk
+command: gpt_transcribe
+finish-args:
+  - --share=network
+  - --socket=x11
+modules:
+  - name: python-deps
+    buildsystem: simple
+    build-commands:
+      - pip3 install --no-cache-dir --prefix=/app -r requirements.txt
+    sources:
+      - type: file
+        path: requirements.txt
+  - name: ffmpeg
+    buildsystem: simple
+    sources:
+      - type: archive
+        url: https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
+        sha256: abda8d77ce8309141f83ab8edf0596834087c52467f6badf376a6a2a4c87cf67
+        strip-components: 1
+    build-commands:
+      - install -Dm755 ffmpeg /app/bin/ffmpeg
+      - install -Dm755 ffprobe /app/bin/ffprobe
+  - name: gpt_transcribe
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 gui.py /app/bin/gpt_transcribe
+      - install -Dm644 transcribe_summary.py /app/bin/transcribe_summary.py
+      - install -Dm644 summary_prompt.txt /app/bin/summary_prompt.txt
+      - install -Dm644 config.template.cfg /app/bin/config.template.cfg
+      - install -Dm644 README.md /app/bin/README.md
+      - install -Dm644 logo/logo.png /app/share/icons/hicolor/256x256/apps/io.github.gpt_transcribe.png
+    sources:
+      - type: dir
+        path: .
