@@ -19,14 +19,12 @@ pip install -r requirements.txt
 ```
 
 ## Usage
-1. Copy `config.template.cfg` to `config.cfg` and edit it:
-   - Set `api_key` with your OpenAI API key
-   - Choose the default transcription `method` (`api` or `local`) and summary `language`
-   - Pick Whisper models for API and local runs by uncommenting one line in the `[whisper_api]` and `[whisper_local]` sections
-   - Optionally adjust the chat `summary_model`
+1. On first launch the program creates `config.cfg` and `summary_prompt.txt` from bundled defaults.
+   - Edit `config.cfg` to set `api_key`, choose the transcription `method` and summary `language`,
+     and pick Whisper models in the `[whisper_api]` and `[whisper_local]` sections.
+   - The default summary prompt is stored in `summary_prompt.txt` and can be customized.
    `config.cfg` is ignored by git so your API key stays private.
-2. Create `summary_prompt.txt` containing the prompt for the summary.
-3. Run the script:
+2. Run the script:
 
 ```bash
 # Windows
@@ -92,13 +90,35 @@ matching PDF are written to the chosen location.
    ```bash
    pip install pyinstaller
    ```
-2. Build a self‑contained executable:
+2. Build a self‑contained executable including the default config template and prompt:
    ```bash
-   pyinstaller --onefile --noconsole gui.py
+   pyinstaller gui.py --name gpt_transcribe --noconsole --onefile \
+     --add-data "config.template.cfg;." --add-data "summary_prompt.txt;."
    ```
-   The executable is placed in the `dist` directory as `gui.exe`.
-3. (Optional) Use a tool such as [Inno Setup](https://jrsoftware.org/isinfo.php) to turn `gui.exe`
+   The executable is placed in the `dist` directory as `gpt_transcribe.exe`.
+3. (Optional) Use a tool such as [Inno Setup](https://jrsoftware.org/isinfo.php) to turn `gpt_transcribe.exe`
    into a standard Windows installer.
 4. Commit and push your changes, then create a GitHub release. Upload the generated
-   installer or `gui.exe` from the `dist` directory as a release asset so others can
+   installer or `gpt_transcribe.exe` from the `dist` directory as a release asset so others can
    download it.
+
+## Creating a Linux AppImage
+
+1. Install PyInstaller and download [AppImageTool](https://github.com/AppImage/AppImageKit/releases).
+   ```bash
+   pip install pyinstaller
+   ```
+2. Build the application directory with bundled defaults:
+   ```bash
+   pyinstaller gui.py --name gpt_transcribe --noconsole \
+     --add-data "config.template.cfg:." --add-data "summary_prompt.txt:."
+   ```
+3. Rename the folder and add metadata:
+   ```bash
+   mv dist/gpt_transcribe gpt_transcribe.AppDir
+   # add gpt_transcribe.desktop and an icon inside gpt_transcribe.AppDir
+   ```
+4. Create the AppImage:
+   ```bash
+   ./appimagetool gpt_transcribe.AppDir gpt_transcribe.AppImage
+   ```
