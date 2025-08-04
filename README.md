@@ -88,12 +88,11 @@ matching PDF are written to the chosen location.
 ## Compiling the program
 
 Use [PyInstaller](https://pyinstaller.org/) to create a standalone executable. Include the
-template config and prompt so the application can recreate defaults on first run:
+template config, prompt and README so the application can recreate defaults on first run:
 
 ```bash
 # adjust the path separator for your platform (; on Windows, : on Linux/macOS)
-pyinstaller gui.py --name gpt_transcribe --noconsole --onefile \
-  --add-data "config.template.cfg:." --add-data "summary_prompt.txt:."
+pyinstaller gui.py --name gpt_transcribe --noconsole --onefile --add-data "config.template.cfg;." --add-data "summary_prompt.txt;." --add-data "README.md;." --icon logo/logo.ico
 ```
 
 The resulting binary in `dist/` can be executed directly or packaged as shown below.
@@ -104,22 +103,18 @@ The resulting binary in `dist/` can be executed directly or packaged as shown be
    ```bash
    pip install pyinstaller
    ```
-2. Build a self‑contained executable including the default config template and prompt:
-   ```bash
-   pyinstaller gui.py --name gpt_transcribe --noconsole --onefile \
-     --add-data "config.template.cfg;." --add-data "summary_prompt.txt;."
+2. Install [Inno Setup](https://jrsoftware.org/isinfo.php) and ensure `iscc.exe` is in your `PATH`.
+3. Run the helper script that builds the executable and compiles the installer:
+   ```bat
+   build_windows.bat
    ```
-   ```bash
-   pyinstaller gui.py --name gpt_transcribe --noconsole --onefile --add-data "config.template.cfg;." --add-data "summary_prompt.txt;. --icon=logo/logo.ico"
-   ```
-   The executable is placed in the `dist` directory as `gpt_transcribe.exe`.
-3. (Optional) Use a tool such as [Inno Setup](https://jrsoftware.org/isinfo.php) to turn `gpt_transcribe.exe`
-   into a standard Windows installer.
+   This creates `dist\gpt_transcribe.exe` and `gpt_transcribe_setup.exe`.
 4. Commit and push your changes, then create a GitHub release. Upload the generated
-   installer or `gpt_transcribe.exe` from the `dist` directory as a release asset so others can
-   download it.
+   installer or `dist\gpt_transcribe.exe` so others can download it.
 
 ## Creating a Linux AppImage
+
+A helper script `build_appimage.sh` automates the following steps.
 
 1. Install PyInstaller and download [AppImageTool](https://github.com/AppImage/AppImageKit/releases).
    ```bash
@@ -127,8 +122,7 @@ The resulting binary in `dist/` can be executed directly or packaged as shown be
    ```
 2. Build the application directory with bundled defaults:
    ```bash
-   pyinstaller gui.py --name gpt_transcribe --noconsole \
-     --add-data "config.template.cfg:." --add-data "summary_prompt.txt:."
+   pyinstaller gui.py --name gpt_transcribe --noconsole --onefile --add-data "config.template.cfg:." --add-data "summary_prompt.txt:." --add-data "README.md:." --icon logo/logo.ico
    ```
 3. Rename the folder and add metadata:
    ```bash
@@ -143,10 +137,9 @@ The resulting binary in `dist/` can be executed directly or packaged as shown be
 ## Creating a Flatpak
 
 1. Install `flatpak` and `flatpak-builder` on your system.
-2. Build the application with PyInstaller including the config template and prompt:
+2. Build the application with PyInstaller including the config template, prompt and README:
    ```bash
-   pyinstaller gui.py --name gpt_transcribe --noconsole \
-     --add-data "config.template.cfg:." --add-data "summary_prompt.txt:."
+   pyinstaller gui.py --name gpt_transcribe --noconsole --onefile --add-data "config.template.cfg:." --add-data "summary_prompt.txt:." --add-data "README.md:." --icon logo/logo.ico
    ```
 3. Create a Flatpak manifest `io.github.gpt_transcribe.yaml` that installs the
    PyInstaller output. A minimal example:
