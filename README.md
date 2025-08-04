@@ -72,3 +72,33 @@ form `YYYYMMDD_NameOfTheFile.md` and a matching `.pdf` file. Successfully
 processed audio files are tracked in `processed.log` along with file size,
 duration, transcription method, transcription time and timestamp to avoid
 duplicate work.
+
+## GUI
+
+Launch a simple desktop interface instead of the command line:
+
+```bash
+python gui.py
+```
+
+The GUI loads `config.cfg` and `summary_prompt.txt` at startup. Changes to the API key,
+Whisper models or the summary prompt can be edited in the window and saved back to the
+respective files. When an audio file is selected and transcribed, a Markdown file and
+matching PDF are written to the chosen location.
+
+## Creating a Windows installer and GitHub release
+
+1. Install PyInstaller:
+   ```bash
+   pip install pyinstaller
+   ```
+2. Build a self‑contained executable:
+   ```bash
+   pyinstaller --onefile --noconsole gui.py
+   ```
+   The executable is placed in the `dist` directory as `gui.exe`.
+3. (Optional) Use a tool such as [Inno Setup](https://jrsoftware.org/isinfo.php) to turn `gui.exe`
+   into a standard Windows installer.
+4. Commit and push your changes, then create a GitHub release. Upload the generated
+   installer or `gui.exe` from the `dist` directory as a release asset so others can
+   download it.
