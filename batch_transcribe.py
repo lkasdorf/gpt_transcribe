@@ -12,12 +12,11 @@ matching ``.pdf`` file.
 from __future__ import annotations
 
 import argparse
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Set
-
-from pydub import AudioSegment
 
 import transcribe_summary
 
@@ -65,6 +64,8 @@ def _process_file(
 ) -> None:
     """Transcribe a single audio file and write its summary."""
     print(f"Transcribing {path.name} using {whisper_model} via {method}...")
+
+    from pydub import AudioSegment
 
     size_bytes = path.stat().st_size
     audio = AudioSegment.from_file(path)
@@ -119,6 +120,12 @@ def main() -> None:
         help="Language for the generated summaries",
     )
     args = parser.parse_args()
+
+    if not transcribe_summary.check_ffmpeg():
+        print(
+            "Warning: ffmpeg is not installed or not found in PATH.",
+            file=sys.stderr,
+        )
 
     config = transcribe_summary.load_config()
 
