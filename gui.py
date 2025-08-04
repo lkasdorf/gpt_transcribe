@@ -175,11 +175,16 @@ class TranscribeGUI:
                 self.status_var.set(
                     f"Transcribing {idx}/{len(self.audio_files)}"
                 )
+
+                def update(msg: str, i=idx):
+                    self.status_var.set(f"{msg} ({i}/{len(self.audio_files)})")
+
                 transcript = transcribe_summary.transcribe(
                     audio,
                     model_name=whisper_model,
                     method=method,
                     api_key=api_key if method == "api" else None,
+                    progress_cb=update,
                 )
                 self.progress.step()
                 self.status_var.set("Summarizing...")
@@ -225,8 +230,11 @@ class SettingsWindow(tk.Toplevel):
         super().__init__(app.master)
         self.app = app
         self.title("Settings")
-        self.resizable(False, False)
-        self.geometry("600x400")
+        self.minsize(600, 400)
+        self.resizable(True, True)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure(2, weight=1)
+        self.grid_rowconfigure(4, weight=1)
 
         self.config = transcribe_summary.load_config(CONFIG_PATH)
         prompt_text = transcribe_summary._load_text(PROMPT_PATH)
@@ -248,9 +256,13 @@ class SettingsWindow(tk.Toplevel):
         self.summary_model_var = tk.StringVar(
             value=self.config["openai"].get("summary_model", "")
         )
-        ttk.Combobox(
-            self, textvariable=self.summary_model_var, values=SUMMARY_MODELS
-        ).grid(row=1, column=1, columnspan=2, sticky="we", pady=2)
+        self.summary_model_cb = ttk.Combobox(
+            self,
+            textvariable=self.summary_model_var,
+            values=SUMMARY_MODELS,
+            state="readonly",
+        )
+        self.summary_model_cb.grid(row=1, column=1, columnspan=2, sticky="we", pady=2)
 
         tk.Label(self, text="Whisper API Model").grid(
             row=2, column=0, sticky="e", padx=5, pady=2
@@ -258,9 +270,13 @@ class SettingsWindow(tk.Toplevel):
         self.api_model_var = tk.StringVar(
             value=self.config["whisper_api"].get("model", "")
         )
-        ttk.Combobox(
-            self, textvariable=self.api_model_var, values=api_models
-        ).grid(row=2, column=1, columnspan=2, sticky="we", pady=2)
+        self.api_model_cb = ttk.Combobox(
+            self,
+            textvariable=self.api_model_var,
+            values=api_models,
+            state="readonly",
+        )
+        self.api_model_cb.grid(row=2, column=1, columnspan=2, sticky="we", pady=2)
 
         tk.Label(self, text="Whisper Local Model").grid(
             row=3, column=0, sticky="e", padx=5, pady=2
@@ -268,15 +284,21 @@ class SettingsWindow(tk.Toplevel):
         self.local_model_var = tk.StringVar(
             value=self.config["whisper_local"].get("model", "")
         )
-        ttk.Combobox(
-            self, textvariable=self.local_model_var, values=local_models
-        ).grid(row=3, column=1, columnspan=2, sticky="we", pady=2)
+        self.local_model_cb = ttk.Combobox(
+            self,
+            textvariable=self.local_model_var,
+            values=local_models,
+            state="readonly",
+        )
+        self.local_model_cb.grid(row=3, column=1, columnspan=2, sticky="we", pady=2)
 
         tk.Label(self, text="Summary Prompt").grid(
             row=4, column=0, sticky="ne", padx=5, pady=2
         )
         self.prompt_box = scrolledtext.ScrolledText(self, height=10, width=60)
-        self.prompt_box.grid(row=4, column=1, columnspan=2, sticky="we", pady=2)
+        self.prompt_box.grid(
+            row=4, column=1, columnspan=2, sticky="nsew", padx=5, pady=2
+        )
         self.prompt_box.insert("1.0", prompt_text)
 
         tk.Button(self, text="Save", command=self.save_settings).grid(
