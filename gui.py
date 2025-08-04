@@ -9,8 +9,10 @@ import transcribe_summary
 BASE_DIR = transcribe_summary.BASE_DIR
 CONFIG_PATH = BASE_DIR / transcribe_summary.CONFIG_FILE
 PROMPT_PATH = BASE_DIR / transcribe_summary.PROMPT_FILE
-WHISPER_CONFIG_PATH = BASE_DIR / transcribe_summary.WHISPER_MODEL_CONFIG
-README_PATH = BASE_DIR / "README.md"
+CONFIG_TEMPLATE_PATH = (
+    transcribe_summary.RESOURCE_DIR / transcribe_summary.CONFIG_TEMPLATE
+)
+README_PATH = transcribe_summary.RESOURCE_DIR / "README.md"
 
 AUDIO_EXTS = [
     ("Audio Files", "*.mp3 *.wav *.m4a *.aac *.flac *.ogg *.wma"),
@@ -20,27 +22,42 @@ AUDIO_EXTS = [
 SUMMARY_MODELS = ["gpt-4o-mini", "gpt-4o"]
 
 
-def load_whisper_models(path: Path = WHISPER_CONFIG_PATH):
-    api_models, local_models = [], []
-    current = None
-    if path.exists():
+def load_whisper_models(
+    config_path: Path = CONFIG_PATH, template_path: Path = CONFIG_TEMPLATE_PATH
+):
+    def parse(path: Path):
+        api, local = [], []
+        current = None
         with open(path, "r", encoding="utf-8") as f:
             for line in f:
-                line = line.strip()
-                if not line:
+                stripped = line.strip()
+                if not stripped:
                     continue
-                if line.startswith("#"):
-                    lower = line.lower()
-                    if "api models" in lower:
+                if stripped.startswith("[") and stripped.endswith("]"):
+                    section = stripped.strip("[]")
+                    if section == "whisper_api":
                         current = "api"
-                    elif "local models" in lower:
+                    elif section == "whisper_local":
                         current = "local"
+                    else:
+                        current = None
                     continue
-                if current == "api":
-                    api_models.append(line)
-                elif current == "local":
-                    local_models.append(line)
-    return api_models, local_models
+                stripped = stripped.lstrip("#").strip()
+                if stripped.startswith("model") and "=" in stripped and current:
+                    model = stripped.split("=", 1)[1].strip()
+                    if current == "api":
+                        api.append(model)
+                    else:
+                        local.append(model)
+        return api, local
+
+    api_models, local_models = set(), set()
+    for p in (template_path, config_path):
+        if p.exists():
+            api, local = parse(p)
+            api_models.update(api)
+            local_models.update(local)
+    return sorted(api_models), sorted(local_models)
 
 
 class TranscribeGUI:
@@ -90,11 +107,29 @@ class TranscribeGUI:
             row=1, column=2, padx=5, pady=2
         )
 
+        tk.Label(self.master, text="Method").grid(
+            row=2, column=0, sticky="e", padx=5, pady=2
+        )
+        self.method_var = tk.StringVar(
+            value=self.config["general"].get("method", "api")
+        )
+        ttk.Combobox(
+            self.master,
+            textvariable=self.method_var,
+            values=["api", "local"],
+            state="readonly",
+        ).grid(row=2, column=1, sticky="we", pady=2)
+
+        self.progress = ttk.Progressbar(
+            self.master, length=200, mode="determinate"
+        )
+        self.progress.grid(row=3, column=1, columnspan=2, sticky="we", padx=5, pady=2)
+
         tk.Button(self.master, text="Transcribe", command=self.start_transcription).grid(
-            row=2, column=1, pady=5
+            row=4, column=1, pady=5, sticky="e"
         )
         tk.Label(self.master, textvariable=self.status_var).grid(
-            row=2, column=2, sticky="w"
+            row=4, column=2, sticky="w"
         )
 
     def select_audio(self) -> None:
@@ -118,6 +153,8 @@ class TranscribeGUI:
         if not output_dir:
             messagebox.showwarning("No output", "Please select an output directory.")
             return
+        self.progress["value"] = 0
+        self.progress["maximum"] = len(self.audio_files) * 3
         threading.Thread(
             target=self.transcribe_all, args=(output_dir,), daemon=True
         ).start()
@@ -126,7 +163,7 @@ class TranscribeGUI:
         self.status_var.set("Working...")
         try:
             cfg = transcribe_summary.load_config(CONFIG_PATH)
-            method = cfg["general"].get("method", "api")
+            method = self.method_var.get()
             language = cfg["general"].get("language", "en")
             api_key = cfg["openai"]["api_key"]
             summary_model = cfg["openai"]["summary_model"]
@@ -135,17 +172,23 @@ class TranscribeGUI:
             prompt = transcribe_summary._load_text(PROMPT_PATH)
 
             for idx, audio in enumerate(self.audio_files, 1):
-                self.status_var.set(f"{idx}/{len(self.audio_files)}")
+                self.status_var.set(
+                    f"Transcribing {idx}/{len(self.audio_files)}"
+                )
                 transcript = transcribe_summary.transcribe(
                     audio,
                     model_name=whisper_model,
                     method=method,
                     api_key=api_key if method == "api" else None,
                 )
+                self.progress.step()
+                self.status_var.set("Summarizing...")
                 summary = transcribe_summary.summarize(
                     prompt, transcript, summary_model, api_key, language
                 )
                 summary = transcribe_summary.strip_code_fences(summary)
+                self.progress.step()
+                self.status_var.set("Writing output...")
                 heading = "Summary" if language == "en" else "Zusammenfassung"
                 markdown_content = f"# {heading}\n\n{summary}\n"
                 out_md = Path(output_dir) / (Path(audio).stem + ".md")
@@ -153,6 +196,7 @@ class TranscribeGUI:
                     f.write(markdown_content)
                 pdf_path = out_md.with_suffix(".pdf")
                 transcribe_summary.markdown_to_pdf(markdown_content, str(pdf_path))
+                self.progress.step()
 
             self.status_var.set("Done")
             messagebox.showinfo("Finished", f"Summaries written to {output_dir}")
@@ -182,6 +226,7 @@ class SettingsWindow(tk.Toplevel):
         self.app = app
         self.title("Settings")
         self.resizable(False, False)
+        self.geometry("600x400")
 
         self.config = transcribe_summary.load_config(CONFIG_PATH)
         prompt_text = transcribe_summary._load_text(PROMPT_PATH)
@@ -193,7 +238,7 @@ class SettingsWindow(tk.Toplevel):
         self.api_key_var = tk.StringVar(
             value=self.config["openai"].get("api_key", "")
         )
-        tk.Entry(self, textvariable=self.api_key_var, width=40).grid(
+        tk.Entry(self, textvariable=self.api_key_var, width=60).grid(
             row=0, column=1, columnspan=2, sticky="we", pady=2
         )
 
@@ -230,7 +275,7 @@ class SettingsWindow(tk.Toplevel):
         tk.Label(self, text="Summary Prompt").grid(
             row=4, column=0, sticky="ne", padx=5, pady=2
         )
-        self.prompt_box = tk.Text(self, height=5, width=40)
+        self.prompt_box = scrolledtext.ScrolledText(self, height=10, width=60)
         self.prompt_box.grid(row=4, column=1, columnspan=2, sticky="we", pady=2)
         self.prompt_box.insert("1.0", prompt_text)
 
@@ -255,6 +300,11 @@ class SettingsWindow(tk.Toplevel):
 
 def main() -> None:
     root = tk.Tk()
+    if not transcribe_summary.check_ffmpeg():
+        messagebox.showwarning(
+            "ffmpeg missing",
+            "ffmpeg is not installed or not found in PATH.",
+        )
     TranscribeGUI(root)
     root.mainloop()
 
