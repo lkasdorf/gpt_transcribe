@@ -156,16 +156,20 @@ downloads `appimagetool` if needed. The resulting AppImage is placed in `dist/`.
    sdk: org.freedesktop.Sdk
    command: gpt_transcribe
    modules:
-     - name: gpt_transcribe
-       buildsystem: simple
-       build-commands:
-         - install -Dm755 dist/gpt_transcribe /app/bin/gpt_transcribe
-       sources:
-         - type: dir
-           path: dist
+   - name: gpt_transcribe
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 gpt_transcribe/gpt_transcribe /app/bin/gpt_transcribe
+    sources:
+      - type: dir
+        path: dist
+
    ```
 4. Build and bundle the Flatpak:
    ```bash
    flatpak-builder --force-clean build-dir io.github.gpt_transcribe.yaml
    flatpak build-bundle build-dir gpt_transcribe.flatpak io.github.gpt_transcribe
+
+   flatpak-builder --repo=repo --force-clean build-dir io.github.gpt_transcribe.yaml
+   flatpak build-bundle repo gpt_transcribe.flatpak io.github.gpt_transcribe
    ```
