@@ -26,6 +26,8 @@ share/python-wheels/
 *.egg
 MANIFEST
 gpt_trans/
+GPT_Transcribe.AppDir/
+.flatpak-builder/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
