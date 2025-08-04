@@ -7,7 +7,7 @@ import shutil
 import sys
 import tempfile
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -26,11 +26,17 @@ if hasattr(sys, "_MEIPASS"):
 else:
     RESOURCE_DIR = Path(__file__).resolve().parent
 
-if platform.system() == "Linux":
-    BASE_DIR = Path.home() / ".config" / "GTP_Transcribe"
-    BASE_DIR.mkdir(parents=True, exist_ok=True)
-else:
+# Determine where user-modifiable files live. If a config file exists in the
+# program directory, prefer that location. Otherwise fall back to the OS
+# specific default (~/.config on Linux, the program directory elsewhere).
+if (RESOURCE_DIR / "config.cfg").exists():
     BASE_DIR = RESOURCE_DIR
+else:
+    if platform.system() == "Linux":
+        BASE_DIR = Path.home() / ".config" / "GTP_Transcribe"
+        BASE_DIR.mkdir(parents=True, exist_ok=True)
+    else:
+        BASE_DIR = RESOURCE_DIR
 
 TEMP_DIR = BASE_DIR / "temp"
 
@@ -175,7 +181,13 @@ def strip_code_fences(text: str) -> str:
             lines = lines[:-1]
         return "\n".join(lines).strip()
     return text
-def transcribe(audio_path: str, model_name: str, method: str, api_key: Optional[str] = None) -> str:
+def transcribe(
+    audio_path: str,
+    model_name: str,
+    method: str,
+    api_key: Optional[str] = None,
+    progress_cb: Optional[Callable[[str], None]] = None,
+) -> str:
     """Transcribe an audio file either locally or via the OpenAI API.
 
     If the audio file is larger than 25 MB and the API is used it is split into
@@ -193,11 +205,16 @@ def transcribe(audio_path: str, model_name: str, method: str, api_key: Optional[
         client = OpenAI(api_key=api_key)
         try:
             if os.path.getsize(audio_path) <= MAX_CHUNK_BYTES:
-                print("Transcribing whole file via API...")
+                msg = "Transcribing whole file via API..."
+                print(msg)
+                if progress_cb:
+                    progress_cb(msg)
                 with open(audio_path, "rb") as f:
                     result = client.audio.transcriptions.create(
                         model=model_name, file=f
                     )
+                if progress_cb:
+                    progress_cb("Finished whole file")
                 return result.text.strip()
 
             audio_format = Path(audio_path).suffix.lstrip(".").lower()
@@ -206,7 +223,10 @@ def transcribe(audio_path: str, model_name: str, method: str, api_key: Optional[
             audio = AudioSegment.from_file(audio_path)
             num_chunks = math.ceil(os.path.getsize(audio_path) / MAX_CHUNK_BYTES)
             chunk_length_ms = len(audio) // num_chunks
-            print(f"Transcribing audio in {num_chunks} chunks via API...")
+            header_msg = f"Transcribing audio in {num_chunks} chunks via API..."
+            print(header_msg)
+            if progress_cb:
+                progress_cb(header_msg)
 
             texts = []
             for i in range(num_chunks):
@@ -217,7 +237,10 @@ def transcribe(audio_path: str, model_name: str, method: str, api_key: Optional[
                     suffix=f".{audio_format}", dir=TEMP_DIR, delete=False
                 ) as tmp:
                     tmp_path = tmp.name
-                print(f"Transcribing chunk {i + 1}/{num_chunks} via API...")
+                chunk_msg = f"Transcribing chunk {i + 1}/{num_chunks} via API..."
+                print(chunk_msg)
+                if progress_cb:
+                    progress_cb(chunk_msg)
                 chunk.export(tmp_path, format=export_format)
                 with open(tmp_path, "rb") as f:
                     result = client.audio.transcriptions.create(
@@ -225,8 +248,13 @@ def transcribe(audio_path: str, model_name: str, method: str, api_key: Optional[
                     )
                 texts.append(result.text.strip())
                 os.remove(tmp_path)
-                print(f"Finished chunk {i + 1}/{num_chunks}")
+                done_msg = f"Finished chunk {i + 1}/{num_chunks}"
+                print(done_msg)
+                if progress_cb:
+                    progress_cb(done_msg)
 
+            if progress_cb:
+                progress_cb("Finished all chunks")
             return " ".join(texts)
         finally:
             shutil.rmtree(TEMP_DIR, ignore_errors=True)
@@ -234,8 +262,12 @@ def transcribe(audio_path: str, model_name: str, method: str, api_key: Optional[
         import whisper
         import torch
 
+        if progress_cb:
+            progress_cb("Transcribing locally...")
         model = whisper.load_model(model_name)
         result = model.transcribe(audio_path, fp16=torch.cuda.is_available())
+        if progress_cb:
+            progress_cb("Finished local transcription")
         return result["text"].strip()
 
 
