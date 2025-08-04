@@ -213,3 +213,4 @@ audio/*
 output/*
 !output/.gitkeep
 temp/
+inno_setup.iss
