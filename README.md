@@ -110,7 +110,7 @@ The resulting binary in `dist/` can be executed directly or packaged as shown be
      --add-data "config.template.cfg;." --add-data "summary_prompt.txt;."
    ```
    ```bash
-   pyinstaller gui.py --name gpt_transcribe --noconsole --onefile --add-data "config.template.cfg;." --add-data "summary_prompt.txt;."
+   pyinstaller gui.py --name gpt_transcribe --noconsole --onefile --add-data "config.template.cfg;." --add-data "summary_prompt.txt;. --icon=logo/logo.ico"
    ```
    The executable is placed in the `dist` directory as `gpt_transcribe.exe`.
 3. (Optional) Use a tool such as [Inno Setup](https://jrsoftware.org/isinfo.php) to turn `gpt_transcribe.exe`
