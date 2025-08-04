@@ -10,6 +10,9 @@ ICON_SOURCE="logo/logo.png"
 ICON_NAME="gpt_transcribe.png"
 APPIMAGETOOL="appimagetool-x86_64.AppImage"
 APPIMAGETOOL_URL="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
+FFMPEG_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+FFMPEG_TAR="ffmpeg-release-amd64-static.tar.xz"
+FLATPAK_MANIFEST="io.github.gpt_transcribe.yaml"
 DIST_DIR="./dist"
 APPDIR="${APP_NAME}.AppDir"
 OUTPUT_APPIMAGE="${DIST_DIR}/${APP_NAME}-x86_64.AppImage"
@@ -25,6 +28,14 @@ else
     echo "✅ appimagetool ist bereits vorhanden."
 fi
 
+# === CHECK: ffmpeg vorhanden? ===
+if [ ! -f "$FFMPEG_TAR" ]; then
+    echo "⬇️  Lade ffmpeg herunter ..."
+    curl -L -o "$FFMPEG_TAR" "$FFMPEG_URL"
+else
+    echo "✅ ffmpeg-Archiv ist bereits vorhanden."
+fi
+
 # === CLEANUP ===
 echo "🧹 Entferne alte Builds ..."
 rm -rf build/ dist/ ${APPDIR} __pycache__ *.spec
@@ -34,13 +45,24 @@ echo "ℹ️  Python-Abhängigkeiten und PyInstaller müssen bereits installiert
 
 # === Kompilieren mit PyInstaller ===
 echo "⚙️  Baue das Python-Programm mit PyInstaller ..."
-pyinstaller --onefile ${MAIN_SCRIPT}
+pyinstaller --onefile \
+    --add-data "config.template.cfg:." \
+    --add-data "summary_prompt.txt:." \
+    --add-data "README.md:." \
+    ${MAIN_SCRIPT}
 
 # === AppDir-Struktur vorbereiten ===
 echo "📁 Erstelle AppDir-Struktur ..."
 mkdir -p ${APPDIR}/usr/bin
 cp ${DIST_DIR}/${MAIN_SCRIPT%.py} ${APPDIR}/usr/bin/gpt_transcribe
 cp ${ICON_SOURCE} ${APPDIR}/${ICON_NAME}
+
+# ffmpeg in AppImage bereitstellen
+TMP_FFMPEG=$(mktemp -d)
+tar -xf "$FFMPEG_TAR" -C "$TMP_FFMPEG" --strip-components=1
+cp "$TMP_FFMPEG/ffmpeg" "${APPDIR}/usr/bin/ffmpeg"
+cp "$TMP_FFMPEG/ffprobe" "${APPDIR}/usr/bin/ffprobe"
+rm -rf "$TMP_FFMPEG"
 
 # === AppRun erstellen ===
 echo "⚙️ Erstelle AppRun ..."
@@ -68,6 +90,12 @@ echo "📦 Erstelle AppImage mit $APPIMAGETOOL ..."
 ./$APPIMAGETOOL ${APPDIR} ${OUTPUT_APPIMAGE}
 
 echo "✅ Fertig: AppImage erstellt unter ${OUTPUT_APPIMAGE}"
+
+# === Flatpak erstellen ===
+echo "📦 Erstelle Flatpak ..."
+flatpak-builder --repo=repo --force-clean build-dir ${FLATPAK_MANIFEST}
+flatpak build-bundle repo gpt_transcribe.flatpak io.github.gpt_transcribe
+echo "✅ Fertig: Flatpak erstellt unter gpt_transcribe.flatpak"
 
 # === Testen (optional) ===
 echo "🚀 Starte Testlauf des AppImages ..."
