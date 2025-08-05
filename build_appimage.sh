@@ -45,12 +45,19 @@ rm -rf build/ dist/ ${APPDIR} __pycache__ *.spec
 # === Abhängigkeiten voraussetzen ===
 echo "ℹ️  Python-Abhängigkeiten und PyInstaller müssen bereits installiert sein."
 
+# Ensure audioop is present; install audioop-lts if missing
+if ! python -c "import audioop" &>/dev/null; then
+    echo "⬇️  Installiere audioop-lts als Ersatz für das veraltete pyaudioop ..."
+    pip install --no-cache-dir audioop-lts
+fi
+
 # === Kompilieren mit PyInstaller ===
 echo "⚙️  Baue das Python-Programm mit PyInstaller ..."
 pyinstaller --onefile \
     --add-data "config.template.cfg:." \
     --add-data "summary_prompt.txt:." \
     --add-data "README.md:." \
+    --hidden-import=audioop \
     ${MAIN_SCRIPT}
 
 # === AppDir-Struktur vorbereiten ===
