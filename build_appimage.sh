@@ -24,11 +24,12 @@ DIST_DIR="./dist"
 APPDIR="${APP_NAME}.AppDir"
 OUTPUT_APPIMAGE="${DIST_DIR}/${APP_NAME}-x86_64.AppImage"
 OUTPUT_FLATPAK="${DIST_DIR}/gpt_transcribe.flatpak"
-DISABLE_CACHE=${DISABLE_CACHE:-1}  # set to 0 to reuse flatpak-builder cache
+FLATPAK_STATE_DIR="${PACKAGES_DIR}/flatpak-builder"
+DISABLE_CACHE=${DISABLE_CACHE:-0}  # set to 1 to disable flatpak-builder cache
 
 echo "📦 Starting AppImage build for $DISPLAY_NAME"
 
-mkdir -p "$PACKAGES_DIR"
+mkdir -p "$PACKAGES_DIR" "$FLATPAK_STATE_DIR"
 
 # === Check: appimagetool present? ===
 if [ ! -f "$APPIMAGETOOL" ]; then
@@ -130,11 +131,13 @@ if [ "$DISABLE_CACHE" = "1" ]; then
         --force-clean \
         --delete-build-dirs \
         --disable-cache \
+        --state-dir="${FLATPAK_STATE_DIR}" \
         build-dir ${FLATPAK_MANIFEST}
 else
     echo "🗃  Using Flatpak build cache – skipping repository pruning"
     flatpak-builder \
         --force-clean \
+        --state-dir="${FLATPAK_STATE_DIR}" \
         build-dir ${FLATPAK_MANIFEST}
 fi
 flatpak build-export --no-prune repo build-dir
