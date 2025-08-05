@@ -2,7 +2,7 @@
 ; GPT Transcribe – Installer (optimized version)
 ; -------------------------------------------------------------
 #define MyAppName     "GPT Transcribe"
-#define MyAppVersion  "v0.2-beta"
+#define MyAppVersion  "v0.3-beta"
 #define MyAppPublisher "Leon Kasdorf"
 #define MyAppExeName  "gpt_transcribe.exe"
 
