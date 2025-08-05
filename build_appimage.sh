@@ -2,6 +2,12 @@
 
 set -e
 
+# Redirect all output to a log file
+LOG_DIR="./logs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/build_appimage.log"
+exec > >(tee "$LOG_FILE") 2>&1
+
 # === EINSTELLUNGEN ===
 APP_NAME="GPT_Transcribe"
 DISPLAY_NAME="GPT Transcribe"
@@ -45,12 +51,19 @@ rm -rf build/ dist/ ${APPDIR} __pycache__ *.spec
 # === Abhängigkeiten voraussetzen ===
 echo "ℹ️  Python-Abhängigkeiten und PyInstaller müssen bereits installiert sein."
 
+# Ensure audioop is present; install audioop-lts if missing
+if ! python -c "import audioop" &>/dev/null; then
+    echo "⬇️  Installiere audioop-lts als Ersatz für das veraltete pyaudioop ..."
+    pip install --no-cache-dir audioop-lts
+fi
+
 # === Kompilieren mit PyInstaller ===
 echo "⚙️  Baue das Python-Programm mit PyInstaller ..."
 pyinstaller --onefile \
     --add-data "config.template.cfg:." \
     --add-data "summary_prompt.txt:." \
     --add-data "README.md:." \
+    --hidden-import=audioop \
     ${MAIN_SCRIPT}
 
 # === AppDir-Struktur vorbereiten ===
@@ -95,6 +108,11 @@ echo "✅ Fertig: AppImage erstellt unter ${OUTPUT_APPIMAGE}"
 
 # === Flatpak erstellen ===
 echo "📦 Erstelle Flatpak ..."
+# Ensure the Tkinter SDK extension is installed so flatpak-builder can use it
+if ! flatpak info org.freedesktop.Sdk.Extension.python3-tkinter//23.08 >/dev/null 2>&1; then
+    echo "⬇️  Installiere python3-tkinter Flatpak-Erweiterung ..."
+    flatpak install -y flathub org.freedesktop.Sdk.Extension.python3-tkinter//23.08
+fi
 if [ "$DISABLE_CACHE" = "1" ]; then
     echo "⚠️  Cache deaktiviert – 'Pruning cache' wird übersprungen"
     flatpak-builder \

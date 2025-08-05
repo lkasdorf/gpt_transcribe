@@ -1,5 +1,6 @@
 openai>=1.0.0
 pydub
+audioop-lts; python_version >= "3.13"
 reportlab
 
 openai-whisper
