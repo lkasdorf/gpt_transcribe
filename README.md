@@ -167,11 +167,15 @@ placing all artifacts in `dist/`.
 ## Creating a Flatpak
 
 1. Install `flatpak` and `flatpak-builder` on your system.
-2. Build the application with PyInstaller including the config template, prompt and README:
+2. Install the Python Tkinter extension required for the GUI:
+   ```bash
+   flatpak install --user flathub org.freedesktop.Sdk.Extension.python-tkinter//23.08
+   ```
+3. Build the application with PyInstaller including the config template, prompt and README:
    ```bash
    pyinstaller gui.py --name gpt_transcribe --noconsole --onefile --add-data "config.template.cfg:." --add-data "summary_prompt.txt:." --add-data "README.md:." --icon logo/logo.ico
    ```
-3. Create a Flatpak manifest `io.github.gpt_transcribe.yaml` that installs the
+4. Create a Flatpak manifest `io.github.gpt_transcribe.yaml` that installs the
    PyInstaller output. A minimal example:
    ```yaml
    app-id: io.github.gpt_transcribe
@@ -189,7 +193,7 @@ placing all artifacts in `dist/`.
         path: dist
 
    ```
-4. Build and bundle the Flatpak:
+5. Build and bundle the Flatpak:
    ```bash
    flatpak-builder --force-clean build-dir io.github.gpt_transcribe.yaml
    flatpak build-bundle build-dir gpt_transcribe.flatpak io.github.gpt_transcribe
@@ -197,7 +201,7 @@ placing all artifacts in `dist/`.
    flatpak-builder --repo=repo --force-clean build-dir io.github.gpt_transcribe.yaml
    flatpak build-bundle repo gpt_transcribe.flatpak io.github.gpt_transcribe
    ```
-5. Install the bundle and launch the application:
+6. Install the bundle and launch the application:
    ```bash
    flatpak install --user gpt_transcribe.flatpak
    flatpak run io.github.gpt_transcribe
