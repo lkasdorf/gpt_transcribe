@@ -5,6 +5,7 @@ __pycache__/
 
 # C extensions
 *.so
+*.flatpak
 
 # Distribution / packaging
 .Python
@@ -28,6 +29,7 @@ MANIFEST
 gpt_trans/
 GPT_Transcribe.AppDir/
 .flatpak-builder/
+repo/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

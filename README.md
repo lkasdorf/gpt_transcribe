@@ -1,13 +1,14 @@
 # gpt_transcribe
 
 Transcribe audio files with Whisper and summarize the result using a chat model.
-The script runs on both Linux and Windows.
+The script runs on Linux, macOS, and Windows.
 
 ## Installation
 
 1. Install Python 3.8 or newer.
 2. Install [ffmpeg](https://ffmpeg.org/).
    - Linux: `sudo apt install ffmpeg`
+   - macOS: `brew install ffmpeg`
    - Windows: download a build from the ffmpeg website and add it to your `PATH`.
 3. (Optional) Create and activate a virtual environment:
    - Linux/macOS: `python3 -m venv .venv && source .venv/bin/activate`
@@ -20,6 +21,14 @@ The script runs on both Linux and Windows.
 
 ```bash
 sudo apt update && sudo apt install python3-venv ffmpeg
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### macOS
+
+```bash
+brew install python3 ffmpeg
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
@@ -129,6 +138,18 @@ The resulting binary in `dist/` can be executed directly or packaged as shown be
 3. Commit and push your changes, then create a GitHub release. Upload the generated
    installer or `dist\gpt_transcribe.exe` so others can download it.
 
+## Creating a macOS app and DMG
+
+A helper script `build_macos.sh` builds a standalone binary and packs it into a
+compressed disk image:
+
+```bash
+./build_macos.sh
+```
+
+The script installs packages from `requirements.txt`, installs PyInstaller and
+creates `dist/gpt_transcribe` and `dist/gpt_transcribe.dmg`.
+
 ## Creating a Linux AppImage
 
 A helper script `build_appimage.sh` builds an AppImage with all Python dependencies.
@@ -138,7 +159,8 @@ A helper script `build_appimage.sh` builds an AppImage with all Python dependenc
 ```
 
 The script installs packages from `requirements.txt`, installs PyInstaller and
-downloads `appimagetool` if needed. The resulting AppImage is placed in `dist/`.
+downloads `appimagetool` if needed. It produces both the AppImage and a
+`gpt_transcribe.flatpak` bundle, placing all artifacts in `dist/`.
 
 ## Creating a Flatpak
 
