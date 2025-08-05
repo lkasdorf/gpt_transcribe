@@ -100,6 +100,10 @@ Comment=${DISPLAY_NAME} AppImage
 Categories=Utility;
 EOF
 
+# Include AppStream metadata to avoid appimagetool warnings
+mkdir -p ${APPDIR}/usr/share/metainfo
+cp io.github.gpt_transcribe.metainfo.xml ${APPDIR}/usr/share/metainfo/io.github.gpt_transcribe.metainfo.xml
+
 # === AppImage erstellen ===
 echo "📦 Erstelle AppImage mit $APPIMAGETOOL ..."
 ./$APPIMAGETOOL ${APPDIR} ${OUTPUT_APPIMAGE}
@@ -108,10 +112,10 @@ echo "✅ Fertig: AppImage erstellt unter ${OUTPUT_APPIMAGE}"
 
 # === Flatpak erstellen ===
 echo "📦 Erstelle Flatpak ..."
-# Ensure the Tkinter SDK extension is installed so flatpak-builder can use it
-if ! flatpak info org.freedesktop.Sdk.Extension.python3-tkinter//23.08 >/dev/null 2>&1; then
-    echo "⬇️  Installiere python3-tkinter Flatpak-Erweiterung ..."
-    flatpak install -y flathub org.freedesktop.Sdk.Extension.python3-tkinter//23.08
+# Ensure the Python SDK extension is installed so flatpak-builder can use it
+if ! flatpak info org.freedesktop.Sdk.Extension.python3//23.08 >/dev/null 2>&1; then
+    echo "⬇️  Installiere python3 Flatpak-Erweiterung ..."
+    flatpak install -y flathub org.freedesktop.Sdk.Extension.python3//23.08
 fi
 if [ "$DISABLE_CACHE" = "1" ]; then
     echo "⚠️  Cache deaktiviert – 'Pruning cache' wird übersprungen"
