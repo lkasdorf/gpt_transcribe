@@ -17,6 +17,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Set
+from concurrent.futures import ThreadPoolExecutor
+import logging
 
 import transcribe_summary
 
@@ -25,6 +27,8 @@ AUDIO_DIR = BASE_DIR / "audio"
 OUTPUT_DIR = BASE_DIR / "output"
 LOG_FILE = BASE_DIR / "processed.log"
 AUDIO_EXTS = {".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg", ".wma"}
+
+logger = logging.getLogger(__name__)
 
 
 def _load_processed() -> Set[str]:
@@ -63,7 +67,9 @@ def _process_file(
     summary_model: str,
 ) -> None:
     """Transcribe a single audio file and write its summary."""
-    print(f"Transcribing {path.name} using {whisper_model} via {method}...")
+    logger.info(
+        f"Transcribing {path.name} using {whisper_model} via {method}..."
+    )
 
     from pydub import AudioSegment
 
@@ -79,7 +85,7 @@ def _process_file(
     )
     elapsed = time.time() - start
 
-    print("Creating summary...")
+    logger.info("Creating summary...")
     prompt = transcribe_summary._load_text(
         transcribe_summary.BASE_DIR / transcribe_summary.PROMPT_FILE
     )
@@ -99,11 +105,12 @@ def _process_file(
     pdf_path = OUTPUT_DIR / f"{now:%Y%m%d}_{path.stem}.pdf"
     transcribe_summary.markdown_to_pdf(markdown_content, str(pdf_path))
     _append_processed(path.name, size_bytes, duration_sec, method, elapsed)
-    print(f"Finished: {output_path}")
-    print(f"PDF saved to {pdf_path}")
+    logger.info(f"Finished: {output_path}")
+    logger.info(f"PDF saved to {pdf_path}")
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(
         description="Batch transcribe audio files and summarize them."
     )
@@ -122,10 +129,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if not transcribe_summary.check_ffmpeg():
-        print(
-            "Warning: ffmpeg is not installed or not found in PATH.",
-            file=sys.stderr,
-        )
+        logger.warning("ffmpeg is not installed or not found in PATH.")
 
     config = transcribe_summary.load_config()
 
@@ -135,21 +139,40 @@ def main() -> None:
     summary_model = config["openai"]["summary_model"]
     whisper_section = "whisper_api" if method == "api" else "whisper_local"
     whisper_model = config[whisper_section]["model"]
-    print(f"Using model {whisper_model} via {'API' if method == 'api' else 'local'}")
+    logger.info(
+        f"Using model {whisper_model} via {'API' if method == 'api' else 'local'}"
+    )
 
 
     AUDIO_DIR.mkdir(exist_ok=True)
     OUTPUT_DIR.mkdir(exist_ok=True)
     processed = _load_processed()
+    to_process = []
     for audio_file in AUDIO_DIR.iterdir():
         if not audio_file.is_file():
             continue
         if audio_file.suffix.lower() not in AUDIO_EXTS:
             continue
         if audio_file.name in processed:
-            print(f"{audio_file.name} has already been processed.")
+            logger.info(f"{audio_file.name} has already been processed.")
             continue
-        _process_file(audio_file, method, language, whisper_model, api_key, summary_model)
+        to_process.append(audio_file)
+
+    with ThreadPoolExecutor() as ex:
+        futures = [
+            ex.submit(
+                _process_file,
+                audio_file,
+                method,
+                language,
+                whisper_model,
+                api_key,
+                summary_model,
+            )
+            for audio_file in to_process
+        ]
+        for f in futures:
+            f.result()
 
 
 if __name__ == "__main__":

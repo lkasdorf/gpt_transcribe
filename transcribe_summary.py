@@ -8,6 +8,9 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Callable, Optional
+from concurrent.futures import ThreadPoolExecutor
+from io import BytesIO
+import logging
 
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -19,6 +22,8 @@ from reportlab.platypus import (
     SimpleDocTemplate,
     Spacer,
 )
+
+logger = logging.getLogger(__name__)
 
 # Paths for bundled resources and user-modifiable files
 if hasattr(sys, "_MEIPASS"):
@@ -181,6 +186,9 @@ def strip_code_fences(text: str) -> str:
             lines = lines[:-1]
         return "\n".join(lines).strip()
     return text
+_LOCAL_MODEL_CACHE: dict[str, "whisper.Whisper"] = {}
+
+
 def transcribe(
     audio_path: str,
     model_name: str,
@@ -206,7 +214,7 @@ def transcribe(
         try:
             if os.path.getsize(audio_path) <= MAX_CHUNK_BYTES:
                 msg = "Transcribing whole file via API..."
-                print(msg)
+                logger.info(msg)
                 if progress_cb:
                     progress_cb(msg)
                 with open(audio_path, "rb") as f:
@@ -224,34 +232,33 @@ def transcribe(
             num_chunks = math.ceil(os.path.getsize(audio_path) / MAX_CHUNK_BYTES)
             chunk_length_ms = len(audio) // num_chunks
             header_msg = f"Transcribing audio in {num_chunks} chunks via API..."
-            print(header_msg)
+            logger.info(header_msg)
             if progress_cb:
                 progress_cb(header_msg)
 
-            texts = []
-            for i in range(num_chunks):
+            def transcribe_chunk(i: int) -> str:
                 start_ms = i * chunk_length_ms
                 end_ms = min((i + 1) * chunk_length_ms, len(audio))
                 chunk = audio[start_ms:end_ms]
-                with tempfile.NamedTemporaryFile(
-                    suffix=f".{audio_format}", dir=TEMP_DIR, delete=False
-                ) as tmp:
-                    tmp_path = tmp.name
+                buf = BytesIO()
+                chunk.export(buf, format=export_format)
+                buf.seek(0)
+                buf.name = f"chunk{i}.{audio_format}"
                 chunk_msg = f"Transcribing chunk {i + 1}/{num_chunks} via API..."
-                print(chunk_msg)
+                logger.info(chunk_msg)
                 if progress_cb:
                     progress_cb(chunk_msg)
-                chunk.export(tmp_path, format=export_format)
-                with open(tmp_path, "rb") as f:
-                    result = client.audio.transcriptions.create(
-                        model=model_name, file=f
-                    )
-                texts.append(result.text.strip())
-                os.remove(tmp_path)
+                result = client.audio.transcriptions.create(
+                    model=model_name, file=buf
+                )
                 done_msg = f"Finished chunk {i + 1}/{num_chunks}"
-                print(done_msg)
+                logger.info(done_msg)
                 if progress_cb:
                     progress_cb(done_msg)
+                return result.text.strip()
+
+            with ThreadPoolExecutor() as ex:
+                texts = list(ex.map(transcribe_chunk, range(num_chunks)))
 
             if progress_cb:
                 progress_cb("Finished all chunks")
@@ -264,7 +271,10 @@ def transcribe(
 
         if progress_cb:
             progress_cb("Transcribing locally...")
-        model = whisper.load_model(model_name)
+        model = _LOCAL_MODEL_CACHE.get(model_name)
+        if model is None:
+            model = whisper.load_model(model_name)
+            _LOCAL_MODEL_CACHE[model_name] = model
         result = model.transcribe(audio_path, fp16=torch.cuda.is_available())
         if progress_cb:
             progress_cb("Finished local transcription")
@@ -295,6 +305,7 @@ def summarize(
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(
         description="Transcribe audio with Whisper and summarize the result."
     )
@@ -325,10 +336,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if not check_ffmpeg():
-        print(
-            "Warning: ffmpeg is not installed or not found in PATH.",
-            file=sys.stderr,
-        )
+        logger.warning("ffmpeg is not installed or not found in PATH.")
 
     config = load_config()
     prompt_path = ensure_prompt(Path(args.prompt_file))
@@ -339,20 +347,22 @@ def main() -> None:
     api_key = config["openai"]["api_key"]
     whisper_section = "whisper_api" if method == "api" else "whisper_local"
     whisper_model = config[whisper_section]["model"]
-    print(f"Using model {whisper_model} via {'API' if method == 'api' else 'local'}")
-    print("Transcribing audio...")
+    logger.info(
+        f"Using model {whisper_model} via {'API' if method == 'api' else 'local'}"
+    )
+    logger.info("Transcribing audio...")
     transcript = transcribe(
         args.audio,
         model_name=whisper_model,
         method=method,
         api_key=api_key if method == "api" else None,
     )
-    print("Transcription complete.")
+    logger.info("Transcription complete.")
 
-    print("Summarizing transcript...")
+    logger.info("Summarizing transcript...")
     summary = summarize(prompt, transcript, summary_model, api_key, language)
     summary = strip_code_fences(summary)
-    print("Summary complete.")
+    logger.info("Summary complete.")
 
     heading = "Summary" if language == "en" else "Zusammenfassung"
     markdown_content = f"# {heading}\n\n" + summary + "\n"
@@ -362,8 +372,8 @@ def main() -> None:
     pdf_path = Path(args.output).with_suffix(".pdf")
     markdown_to_pdf(markdown_content, str(pdf_path))
 
-    print(f"Summary written to {args.output}")
-    print(f"PDF written to {pdf_path}")
+    logger.info(f"Summary written to {args.output}")
+    logger.info(f"PDF written to {pdf_path}")
 
 if __name__ == "__main__":
     main()
