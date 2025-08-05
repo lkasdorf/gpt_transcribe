@@ -152,57 +152,26 @@ creates `dist/gpt_transcribe` and `dist/gpt_transcribe.dmg`.
 
 ## Creating a Linux AppImage
 
-A helper script `build_appimage.sh` builds an AppImage with all Python dependencies.
+A helper script `build_appimage.sh` builds an AppImage with all Python dependencies and a static `ffmpeg`.
 
 ```bash
 ./build_appimage.sh
 ```
 
 The script installs packages from `requirements.txt`, installs PyInstaller and
-downloads `appimagetool` if needed. Downloaded archives and Flatpak sources are
-cached under `packages/` so they are only fetched again when missing or
-outdated. It produces both the AppImage and a `gpt_transcribe.flatpak` bundle,
-placing all artifacts in `dist/`.
+downloads `appimagetool` if needed. Downloaded archives are cached under
+`packages/` so they are only fetched again when missing or outdated. The
+resulting AppImage runs on any modern distribution and is written to `dist/`.
 
 ## Creating a Flatpak
 
-1. Install `flatpak` and `flatpak-builder` on your system.
-2. Install the Python Tkinter extension required for the GUI:
-   ```bash
-   flatpak install --user flathub org.freedesktop.Sdk.Extension.python-tkinter//23.08
-   ```
-3. Build the application with PyInstaller including the config template, prompt and README:
-   ```bash
-   pyinstaller gui.py --name gpt_transcribe --noconsole --onefile --add-data "config.template.cfg:." --add-data "summary_prompt.txt:." --add-data "README.md:." --icon logo/logo.ico
-   ```
-4. Create a Flatpak manifest `io.github.gpt_transcribe.yaml` that installs the
-   PyInstaller output. A minimal example:
-   ```yaml
-   app-id: io.github.gpt_transcribe
-   runtime: org.freedesktop.Platform
-   runtime-version: "23.08"
-   sdk: org.freedesktop.Sdk
-   command: gpt_transcribe
-   modules:
-   - name: gpt_transcribe
-    buildsystem: simple
-    build-commands:
-      - install -Dm755 gpt_transcribe/gpt_transcribe /app/bin/gpt_transcribe
-    sources:
-      - type: dir
-        path: dist
+`build_flatpak.sh` wraps `flatpak-builder` to produce a `gpt_transcribe.flatpak`
+bundle that contains all Python dependencies and a static `ffmpeg` binary.
 
-   ```
-5. Build and bundle the Flatpak:
-   ```bash
-   flatpak-builder --force-clean build-dir io.github.gpt_transcribe.yaml
-   flatpak build-bundle build-dir gpt_transcribe.flatpak io.github.gpt_transcribe
+```bash
+./build_flatpak.sh
+```
 
-   flatpak-builder --repo=repo --force-clean build-dir io.github.gpt_transcribe.yaml
-   flatpak build-bundle repo gpt_transcribe.flatpak io.github.gpt_transcribe
-   ```
-6. Install the bundle and launch the application:
-   ```bash
-   flatpak install --user gpt_transcribe.flatpak
-   flatpak run io.github.gpt_transcribe
-   ```
+Ensure `flatpak` and `flatpak-builder` are installed. The script installs the
+required Tkinter extension automatically. The generated bundle runs on any
+distribution with Flatpak support and is placed in `dist/`.
