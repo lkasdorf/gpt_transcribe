@@ -71,8 +71,9 @@ fi
 
 # === Build with PyInstaller ===
 echo "⚙️  Building the Python program with PyInstaller ..."
+# Bundle Whisper's assets like mel_filters.npz
 pyinstaller --onefile \
-    --collect-data whisper \  # bundle Whisper's assets like mel_filters.npz
+    --collect-data whisper \
     --add-data "config.template.cfg:." \
     --add-data "summary_prompt.txt:." \
     --add-data "README.md:." \
