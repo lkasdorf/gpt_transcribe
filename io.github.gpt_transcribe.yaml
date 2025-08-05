@@ -2,6 +2,10 @@ app-id: io.github.gpt_transcribe
 runtime: org.freedesktop.Platform
 runtime-version: "23.08"
 sdk: org.freedesktop.Sdk
+runtime-extensions:
+  - org.freedesktop.Sdk.Extension.python-tkinter
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.python-tkinter
 command: gpt_transcribe
 finish-args:
   - --share=network
