@@ -126,7 +126,7 @@ echo "✅ Done: AppImage created at ${OUTPUT_APPIMAGE}"
 echo "📦 Creating Flatpak ..."
 # Python support is provided by org.freedesktop.Sdk; no extra extension is needed
 if [ "$DISABLE_CACHE" = "1" ]; then
-    echo "⚠️  Cache disabled – skipping repository pruning"
+    echo "⚠️  Cache disabled"
     flatpak-builder \
         --force-clean \
         --delete-build-dirs \
@@ -134,13 +134,13 @@ if [ "$DISABLE_CACHE" = "1" ]; then
         --state-dir="${FLATPAK_STATE_DIR}" \
         build-dir ${FLATPAK_MANIFEST}
 else
-    echo "🗃  Using Flatpak build cache – skipping repository pruning"
+    echo "🗃  Using Flatpak build cache"
     flatpak-builder \
         --force-clean \
         --state-dir="${FLATPAK_STATE_DIR}" \
         build-dir ${FLATPAK_MANIFEST}
 fi
-flatpak build-export --no-prune repo build-dir
+flatpak build-export repo build-dir
 flatpak build-bundle repo "${OUTPUT_FLATPAK}" io.github.gpt_transcribe
 echo "✅ Done: Flatpak created at ${OUTPUT_FLATPAK}"
 
