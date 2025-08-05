@@ -19,17 +19,13 @@ APPIMAGETOOL="${PACKAGES_DIR}/appimagetool-x86_64.AppImage"
 APPIMAGETOOL_URL="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
 FFMPEG_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
 FFMPEG_TAR="${PACKAGES_DIR}/ffmpeg-release-amd64-static.tar.xz"
-FLATPAK_MANIFEST="io.github.gpt_transcribe.yaml"
 DIST_DIR="./dist"
 APPDIR="${APP_NAME}.AppDir"
 OUTPUT_APPIMAGE="${DIST_DIR}/${APP_NAME}-x86_64.AppImage"
-OUTPUT_FLATPAK="${DIST_DIR}/gpt_transcribe.flatpak"
-FLATPAK_STATE_DIR="${PACKAGES_DIR}/flatpak-builder"
-DISABLE_CACHE=${DISABLE_CACHE:-0}  # set to 1 to disable flatpak-builder cache
 
 echo "📦 Starting AppImage build for $DISPLAY_NAME"
 
-mkdir -p "$PACKAGES_DIR" "$FLATPAK_STATE_DIR"
+mkdir -p "$PACKAGES_DIR"
 
 # === Check: appimagetool present? ===
 if [ ! -f "$APPIMAGETOOL" ]; then
@@ -123,38 +119,6 @@ echo "📦 Creating AppImage with $APPIMAGETOOL ..."
 ./$APPIMAGETOOL ${APPDIR} ${OUTPUT_APPIMAGE}
 
 echo "✅ Done: AppImage created at ${OUTPUT_APPIMAGE}"
-
-# === Create Flatpak ===
-echo "📦 Creating Flatpak ..."
-
-if command -v flatpak >/dev/null 2>&1; then
-    # Ensure the Tkinter extension is available
-    if ! flatpak info org.freedesktop.Sdk.Extension.python-tkinter//23.08 >/dev/null 2>&1; then
-        echo "⬇️  Installing Flatpak python-tkinter extension ..."
-        flatpak install -y --user flathub org.freedesktop.Sdk.Extension.python-tkinter//23.08
-    fi
-
-    if [ "$DISABLE_CACHE" = "1" ]; then
-        echo "⚠️  Cache disabled"
-        flatpak-builder \
-            --force-clean \
-            --delete-build-dirs \
-            --disable-cache \
-            --state-dir="${FLATPAK_STATE_DIR}" \
-            build-dir ${FLATPAK_MANIFEST}
-    else
-        echo "🗃  Using Flatpak build cache"
-        flatpak-builder \
-            --force-clean \
-            --state-dir="${FLATPAK_STATE_DIR}" \
-            build-dir ${FLATPAK_MANIFEST}
-    fi
-    flatpak build-export repo build-dir
-    flatpak build-bundle repo "${OUTPUT_FLATPAK}" io.github.gpt_transcribe
-    echo "✅ Done: Flatpak created at ${OUTPUT_FLATPAK}"
-else
-    echo "⚠️  flatpak not found; skipping Flatpak build"
-fi
 
 # === Test run (optional) ===
 echo "🚀 Starting test run of the AppImage ..."
