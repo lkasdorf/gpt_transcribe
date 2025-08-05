@@ -12,6 +12,7 @@ finish-args:
 modules:
   - name: tcl
     buildsystem: autotools
+    no-autogen: true
     subdir: tcl8.6.13/unix
     sources:
       - type: archive
@@ -19,6 +20,7 @@ modules:
         sha256: 43a1fae7412f61ff11de2cfd05d28cfc3a73762f354a417c62370a54e2caf066
   - name: tk
     buildsystem: autotools
+    no-autogen: true
     subdir: tk8.6.13/unix
     config-opts:
       - --with-tcl=/app/lib
