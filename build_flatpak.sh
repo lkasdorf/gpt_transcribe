@@ -40,10 +40,10 @@ if ! command -v flatpak-builder >/dev/null 2>&1; then
     exit 1
 fi
 
-# Ensure the Tkinter extension is available
-if ! flatpak info org.freedesktop.Sdk.Extension.python-tkinter//23.08 >/dev/null 2>&1; then
-    echo "⬇️  Installing Flatpak python-tkinter extension ..."
-    flatpak install -y --user flathub org.freedesktop.Sdk.Extension.python-tkinter//23.08
+# Ensure Flathub remote exists (needed for potential dependencies)
+if ! flatpak remote-list | grep -q '^flathub'; then
+    echo "🔗 Adding Flathub remote ..."
+    flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 fi
 
 # === Build Flatpak ===
