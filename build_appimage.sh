@@ -126,25 +126,35 @@ echo "✅ Done: AppImage created at ${OUTPUT_APPIMAGE}"
 
 # === Create Flatpak ===
 echo "📦 Creating Flatpak ..."
-# Python support is provided by org.freedesktop.Sdk; no extra extension is needed
-if [ "$DISABLE_CACHE" = "1" ]; then
-    echo "⚠️  Cache disabled"
-    flatpak-builder \
-        --force-clean \
-        --delete-build-dirs \
-        --disable-cache \
-        --state-dir="${FLATPAK_STATE_DIR}" \
-        build-dir ${FLATPAK_MANIFEST}
+
+if command -v flatpak >/dev/null 2>&1; then
+    # Ensure the Tkinter extension is available
+    if ! flatpak info org.freedesktop.Sdk.Extension.python-tkinter//23.08 >/dev/null 2>&1; then
+        echo "⬇️  Installing Flatpak python-tkinter extension ..."
+        flatpak install -y --user flathub org.freedesktop.Sdk.Extension.python-tkinter//23.08
+    fi
+
+    if [ "$DISABLE_CACHE" = "1" ]; then
+        echo "⚠️  Cache disabled"
+        flatpak-builder \
+            --force-clean \
+            --delete-build-dirs \
+            --disable-cache \
+            --state-dir="${FLATPAK_STATE_DIR}" \
+            build-dir ${FLATPAK_MANIFEST}
+    else
+        echo "🗃  Using Flatpak build cache"
+        flatpak-builder \
+            --force-clean \
+            --state-dir="${FLATPAK_STATE_DIR}" \
+            build-dir ${FLATPAK_MANIFEST}
+    fi
+    flatpak build-export repo build-dir
+    flatpak build-bundle repo "${OUTPUT_FLATPAK}" io.github.gpt_transcribe
+    echo "✅ Done: Flatpak created at ${OUTPUT_FLATPAK}"
 else
-    echo "🗃  Using Flatpak build cache"
-    flatpak-builder \
-        --force-clean \
-        --state-dir="${FLATPAK_STATE_DIR}" \
-        build-dir ${FLATPAK_MANIFEST}
+    echo "⚠️  flatpak not found; skipping Flatpak build"
 fi
-flatpak build-export repo build-dir
-flatpak build-bundle repo "${OUTPUT_FLATPAK}" io.github.gpt_transcribe
-echo "✅ Done: Flatpak created at ${OUTPUT_FLATPAK}"
 
 # === Test run (optional) ===
 echo "🚀 Starting test run of the AppImage ..."
