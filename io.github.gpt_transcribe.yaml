@@ -2,10 +2,6 @@ app-id: io.github.gpt_transcribe
 runtime: org.freedesktop.Platform
 runtime-version: "23.08"
 sdk: org.freedesktop.Sdk
-runtime-extensions:
-  - org.freedesktop.Sdk.Extension.python-tkinter
-sdk-extensions:
-  - org.freedesktop.Sdk.Extension.python-tkinter
 command: gpt_transcribe
 finish-args:
   - --share=network
@@ -28,7 +24,7 @@ modules:
     buildsystem: simple
     sources:
       - type: archive
-        path: packages/ffmpeg-release-amd64-static.tar.xz
+        path: ffmpeg-release-amd64-static.tar.xz
         sha256: abda8d77ce8309141f83ab8edf0596834087c52467f6badf376a6a2a4c87cf67
         strip-components: 1
     build-commands:
