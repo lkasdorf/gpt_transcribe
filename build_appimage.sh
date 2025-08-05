@@ -2,6 +2,12 @@
 
 set -e
 
+# Redirect all output to a log file
+LOG_DIR="./logs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/build_appimage.log"
+exec > >(tee "$LOG_FILE") 2>&1
+
 # === EINSTELLUNGEN ===
 APP_NAME="GPT_Transcribe"
 DISPLAY_NAME="GPT Transcribe"
@@ -102,6 +108,11 @@ echo "✅ Fertig: AppImage erstellt unter ${OUTPUT_APPIMAGE}"
 
 # === Flatpak erstellen ===
 echo "📦 Erstelle Flatpak ..."
+# Ensure the Tkinter SDK extension is installed so flatpak-builder can use it
+if ! flatpak info org.freedesktop.Sdk.Extension.python3-tkinter//23.08 >/dev/null 2>&1; then
+    echo "⬇️  Installiere python3-tkinter Flatpak-Erweiterung ..."
+    flatpak install -y flathub org.freedesktop.Sdk.Extension.python3-tkinter//23.08
+fi
 if [ "$DISABLE_CACHE" = "1" ]; then
     echo "⚠️  Cache deaktiviert – 'Pruning cache' wird übersprungen"
     flatpak-builder \
