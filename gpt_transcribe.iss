@@ -20,12 +20,14 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 
 DisableProgramGroupPage=yes
-LicenseFile=LICENSE                     ; <- falls nötig anpassen
+LicenseFile=LICENSE
+; Hinweis: Passe den Pfad an, falls deine LICENSE woanders liegt.
 PrivilegesRequiredOverridesAllowed=dialog
 OutputBaseFilename=gpt_transcribe_install
 SolidCompression=yes
 WizardStyle=modern
-SetupIconFile=logo\logo.ico             ; <- falls nötig anpassen
+SetupIconFile=logo\logo.ico             
+; <- falls nötig anpassen
 OutputDir=dist
 
 [Languages]
