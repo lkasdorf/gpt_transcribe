@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=GPT Transcribe
+Comment=Transcribe audio files with Whisper and summarize using GPT
+Exec=gpt_transcribe
+Icon=io.github.gpt_transcribe
+Categories=AudioVideo;Utility;
+Terminal=false

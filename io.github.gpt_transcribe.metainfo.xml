@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.gpt_transcribe</id>
+  <name>GPT Transcribe</name>
+  <summary>Transcribe audio files with Whisper and summarize using GPT models</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>Transcribe audio files with Whisper and summarize the result using a chat model.</p>
+  </description>
+  <provides>
+    <binary>gpt_transcribe</binary>
+  </provides>
+  <launchable type="desktop-id">io.github.gpt_transcribe.desktop</launchable>
+</component>
