@@ -8,16 +8,17 @@ mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/build_appimage.log"
 exec > >(tee "$LOG_FILE") 2>&1
 
-# === EINSTELLUNGEN ===
+# === SETTINGS ===
 APP_NAME="GPT_Transcribe"
 DISPLAY_NAME="GPT Transcribe"
 MAIN_SCRIPT="gui.py"
 ICON_SOURCE="logo/logo.png"
 ICON_NAME="gpt_transcribe.png"
-APPIMAGETOOL="appimagetool-x86_64.AppImage"
+PACKAGES_DIR="./packages"
+APPIMAGETOOL="${PACKAGES_DIR}/appimagetool-x86_64.AppImage"
 APPIMAGETOOL_URL="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
 FFMPEG_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
-FFMPEG_TAR="ffmpeg-release-amd64-static.tar.xz"
+FFMPEG_TAR="${PACKAGES_DIR}/ffmpeg-release-amd64-static.tar.xz"
 FLATPAK_MANIFEST="io.github.gpt_transcribe.yaml"
 DIST_DIR="./dist"
 APPDIR="${APP_NAME}.AppDir"
@@ -25,40 +26,50 @@ OUTPUT_APPIMAGE="${DIST_DIR}/${APP_NAME}-x86_64.AppImage"
 OUTPUT_FLATPAK="${DIST_DIR}/gpt_transcribe.flatpak"
 DISABLE_CACHE=${DISABLE_CACHE:-1}  # set to 0 to reuse flatpak-builder cache
 
-echo "📦 Starte AppImage-Build für $DISPLAY_NAME"
+echo "📦 Starting AppImage build for $DISPLAY_NAME"
 
-# === CHECK: appimagetool vorhanden? ===
+mkdir -p "$PACKAGES_DIR"
+
+# === Check: appimagetool present? ===
 if [ ! -f "$APPIMAGETOOL" ]; then
-    echo "⬇️  Lade appimagetool herunter ..."
+    echo "⬇️  Downloading appimagetool ..."
     curl -L -o "$APPIMAGETOOL" "$APPIMAGETOOL_URL"
     chmod +x "$APPIMAGETOOL"
 else
-    echo "✅ appimagetool ist bereits vorhanden."
+    echo "✅ appimagetool already present."
 fi
 
-# === CHECK: ffmpeg vorhanden? ===
+# === Check: ffmpeg present? ===
 if [ ! -f "$FFMPEG_TAR" ]; then
-    echo "⬇️  Lade ffmpeg herunter ..."
+    echo "⬇️  Downloading ffmpeg ..."
     curl -L -o "$FFMPEG_TAR" "$FFMPEG_URL"
 else
-    echo "✅ ffmpeg-Archiv ist bereits vorhanden."
+    echo "✅ ffmpeg archive already present."
 fi
 
-# === CLEANUP ===
-echo "🧹 Entferne alte Builds ..."
+# === Cleanup ===
+echo "🧹 Removing old builds ..."
 rm -rf build/ dist/ ${APPDIR} __pycache__ *.spec
+mkdir -p "$DIST_DIR"
 
-# === Abhängigkeiten voraussetzen ===
-echo "ℹ️  Python-Abhängigkeiten und PyInstaller müssen bereits installiert sein."
+# === Prerequisites ===
+echo "ℹ️  Python dependencies and PyInstaller must already be installed."
 
 # Ensure audioop is present; install audioop-lts if missing
 if ! python -c "import audioop" &>/dev/null; then
-    echo "⬇️  Installiere audioop-lts als Ersatz für das veraltete pyaudioop ..."
+    echo "⬇️  Installing audioop-lts as a replacement for deprecated pyaudioop ..."
     pip install --no-cache-dir audioop-lts
 fi
 
-# === Kompilieren mit PyInstaller ===
-echo "⚙️  Baue das Python-Programm mit PyInstaller ..."
+# Ensure Tkinter is available for the GUI
+if ! python -c "import tkinter" &>/dev/null; then
+    echo "⬇️  Installing python3-tk for Tkinter support ..."
+    apt-get update
+    apt-get install -y python3-tk
+fi
+
+# === Build with PyInstaller ===
+echo "⚙️  Building the Python program with PyInstaller ..."
 pyinstaller --onefile \
     --add-data "config.template.cfg:." \
     --add-data "summary_prompt.txt:." \
@@ -66,21 +77,21 @@ pyinstaller --onefile \
     --hidden-import=audioop \
     ${MAIN_SCRIPT}
 
-# === AppDir-Struktur vorbereiten ===
-echo "📁 Erstelle AppDir-Struktur ..."
+# === Prepare AppDir structure ===
+echo "📁 Creating AppDir structure ..."
 mkdir -p ${APPDIR}/usr/bin
 cp ${DIST_DIR}/${MAIN_SCRIPT%.py} ${APPDIR}/usr/bin/gpt_transcribe
 cp ${ICON_SOURCE} ${APPDIR}/${ICON_NAME}
 
-# ffmpeg in AppImage bereitstellen
+# Provide ffmpeg inside AppImage
 TMP_FFMPEG=$(mktemp -d)
 tar -xf "$FFMPEG_TAR" -C "$TMP_FFMPEG" --strip-components=1
 cp "$TMP_FFMPEG/ffmpeg" "${APPDIR}/usr/bin/ffmpeg"
 cp "$TMP_FFMPEG/ffprobe" "${APPDIR}/usr/bin/ffprobe"
 rm -rf "$TMP_FFMPEG"
 
-# === AppRun erstellen ===
-echo "⚙️ Erstelle AppRun ..."
+# === Create AppRun ===
+echo "⚙️ Creating AppRun ..."
 cat > ${APPDIR}/AppRun << 'EOF'
 #!/bin/bash
 HERE="$(dirname "$(readlink -f "$0")")"
@@ -88,8 +99,8 @@ exec "$HERE/usr/bin/gpt_transcribe" "$@"
 EOF
 chmod +x ${APPDIR}/AppRun
 
-# === .desktop Datei erstellen ===
-echo "🖼 Erstelle .desktop-Datei ..."
+# === Create .desktop file ===
+echo "🖼 Creating .desktop file ..."
 cat > ${APPDIR}/gpt_transcribe.desktop <<EOF
 [Desktop Entry]
 Type=Application
@@ -104,34 +115,36 @@ EOF
 mkdir -p ${APPDIR}/usr/share/metainfo
 cp io.github.gpt_transcribe.metainfo.xml ${APPDIR}/usr/share/metainfo/io.github.gpt_transcribe.metainfo.xml
 
-# === AppImage erstellen ===
-echo "📦 Erstelle AppImage mit $APPIMAGETOOL ..."
+# === Create AppImage ===
+echo "📦 Creating AppImage with $APPIMAGETOOL ..."
 ./$APPIMAGETOOL ${APPDIR} ${OUTPUT_APPIMAGE}
 
-echo "✅ Fertig: AppImage erstellt unter ${OUTPUT_APPIMAGE}"
+echo "✅ Done: AppImage created at ${OUTPUT_APPIMAGE}"
 
-# === Flatpak erstellen ===
-echo "📦 Erstelle Flatpak ..."
+# === Create Flatpak ===
+echo "📦 Creating Flatpak ..."
 # Python support is provided by org.freedesktop.Sdk; no extra extension is needed
 if [ "$DISABLE_CACHE" = "1" ]; then
-    echo "⚠️  Cache deaktiviert – 'Pruning cache' wird übersprungen"
+    echo "⚠️  Cache disabled – skipping repository pruning"
     flatpak-builder \
         --repo=repo \
         --force-clean \
         --delete-build-dirs \
         --disable-cache \
+        --export-args="--no-prune" \
         build-dir ${FLATPAK_MANIFEST}
 else
-    echo "🗃  Verwende Flatpak-Build-Cache"
+    echo "🗃  Using Flatpak build cache"
     flatpak-builder \
         --repo=repo \
         --force-clean \
+        --export-args="--no-prune" \
         build-dir ${FLATPAK_MANIFEST}
 fi
 flatpak build-bundle repo "${OUTPUT_FLATPAK}" io.github.gpt_transcribe
-echo "✅ Fertig: Flatpak erstellt unter ${OUTPUT_FLATPAK}"
+echo "✅ Done: Flatpak created at ${OUTPUT_FLATPAK}"
 
-# === Testen (optional) ===
-echo "🚀 Starte Testlauf des AppImages ..."
+# === Test run (optional) ===
+echo "🚀 Starting test run of the AppImage ..."
 ${OUTPUT_APPIMAGE}
 
