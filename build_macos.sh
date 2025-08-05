@@ -7,6 +7,7 @@ pip3 install -r requirements.txt
 pip3 install pyinstaller
 
 pyinstaller gui.py --name gpt_transcribe --noconsole --onefile \
+    --collect-data whisper \  # bundle Whisper's assets like mel_filters.npz
     --add-data "config.template.cfg:." \
     --add-data "summary_prompt.txt:." \
     --add-data "README.md:."
