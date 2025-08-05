@@ -16,7 +16,8 @@ FLATPAK_MANIFEST="io.github.gpt_transcribe.yaml"
 DIST_DIR="./dist"
 APPDIR="${APP_NAME}.AppDir"
 OUTPUT_APPIMAGE="${DIST_DIR}/${APP_NAME}-x86_64.AppImage"
-DISABLE_CACHE=${DISABLE_CACHE:-0}  # set to 1 to force flatpak-builder to prune its cache
+OUTPUT_FLATPAK="${DIST_DIR}/gpt_transcribe.flatpak"
+DISABLE_CACHE=${DISABLE_CACHE:-1}  # set to 0 to reuse flatpak-builder cache
 
 echo "📦 Starte AppImage-Build für $DISPLAY_NAME"
 
@@ -95,7 +96,7 @@ echo "✅ Fertig: AppImage erstellt unter ${OUTPUT_APPIMAGE}"
 # === Flatpak erstellen ===
 echo "📦 Erstelle Flatpak ..."
 if [ "$DISABLE_CACHE" = "1" ]; then
-    echo "⚠️  Cache deaktiviert – dies kann länger dauern"
+    echo "⚠️  Cache deaktiviert – 'Pruning cache' wird übersprungen"
     flatpak-builder \
         --repo=repo \
         --force-clean \
@@ -109,8 +110,8 @@ else
         --force-clean \
         build-dir ${FLATPAK_MANIFEST}
 fi
-flatpak build-bundle repo gpt_transcribe.flatpak io.github.gpt_transcribe
-echo "✅ Fertig: Flatpak erstellt unter gpt_transcribe.flatpak"
+flatpak build-bundle repo "${OUTPUT_FLATPAK}" io.github.gpt_transcribe
+echo "✅ Fertig: Flatpak erstellt unter ${OUTPUT_FLATPAK}"
 
 # === Testen (optional) ===
 echo "🚀 Starte Testlauf des AppImages ..."
