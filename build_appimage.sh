@@ -112,11 +112,7 @@ echo "✅ Fertig: AppImage erstellt unter ${OUTPUT_APPIMAGE}"
 
 # === Flatpak erstellen ===
 echo "📦 Erstelle Flatpak ..."
-# Ensure the Python SDK extension is installed so flatpak-builder can use it
-if ! flatpak info org.freedesktop.Sdk.Extension.python3//23.08 >/dev/null 2>&1; then
-    echo "⬇️  Installiere python3 Flatpak-Erweiterung ..."
-    flatpak install -y flathub org.freedesktop.Sdk.Extension.python3//23.08
-fi
+# Python support is provided by org.freedesktop.Sdk; no extra extension is needed
 if [ "$DISABLE_CACHE" = "1" ]; then
     echo "⚠️  Cache deaktiviert – 'Pruning cache' wird übersprungen"
     flatpak-builder \
