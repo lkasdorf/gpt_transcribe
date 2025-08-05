@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import configparser
 import math
@@ -7,10 +9,13 @@ import shutil
 import sys
 import tempfile
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, TYPE_CHECKING
 from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 import logging
+
+if TYPE_CHECKING:
+    import whisper
 
 from reportlab.lib.pagesizes import LETTER
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -186,7 +191,7 @@ def strip_code_fences(text: str) -> str:
             lines = lines[:-1]
         return "\n".join(lines).strip()
     return text
-_LOCAL_MODEL_CACHE: dict[str, "whisper.Whisper"] = {}
+_LOCAL_MODEL_CACHE: dict[str, whisper.Whisper] = {}
 
 
 def transcribe(
