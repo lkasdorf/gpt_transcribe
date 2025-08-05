@@ -127,20 +127,17 @@ echo "📦 Creating Flatpak ..."
 if [ "$DISABLE_CACHE" = "1" ]; then
     echo "⚠️  Cache disabled – skipping repository pruning"
     flatpak-builder \
-        --repo=repo \
         --force-clean \
         --delete-build-dirs \
         --disable-cache \
-        --export-args="--no-prune" \
         build-dir ${FLATPAK_MANIFEST}
 else
-    echo "🗃  Using Flatpak build cache"
+    echo "🗃  Using Flatpak build cache – skipping repository pruning"
     flatpak-builder \
-        --repo=repo \
         --force-clean \
-        --export-args="--no-prune" \
         build-dir ${FLATPAK_MANIFEST}
 fi
+flatpak build-export --no-prune repo build-dir
 flatpak build-bundle repo "${OUTPUT_FLATPAK}" io.github.gpt_transcribe
 echo "✅ Done: Flatpak created at ${OUTPUT_FLATPAK}"
 
