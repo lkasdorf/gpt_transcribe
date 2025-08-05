@@ -159,8 +159,10 @@ A helper script `build_appimage.sh` builds an AppImage with all Python dependenc
 ```
 
 The script installs packages from `requirements.txt`, installs PyInstaller and
-downloads `appimagetool` if needed. It produces both the AppImage and a
-`gpt_transcribe.flatpak` bundle, placing all artifacts in `dist/`.
+downloads `appimagetool` if needed. Downloaded archives and Flatpak sources are
+cached under `packages/` so they are only fetched again when missing or
+outdated. It produces both the AppImage and a `gpt_transcribe.flatpak` bundle,
+placing all artifacts in `dist/`.
 
 ## Creating a Flatpak
 
