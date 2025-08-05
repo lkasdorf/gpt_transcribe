@@ -173,3 +173,8 @@ downloads `appimagetool` if needed. The resulting AppImage is placed in `dist/`.
    flatpak-builder --repo=repo --force-clean build-dir io.github.gpt_transcribe.yaml
    flatpak build-bundle repo gpt_transcribe.flatpak io.github.gpt_transcribe
    ```
+5. Install the bundle and launch the application:
+   ```bash
+   flatpak install --user gpt_transcribe.flatpak
+   flatpak run io.github.gpt_transcribe
+   ```
