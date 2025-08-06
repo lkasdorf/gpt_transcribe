@@ -312,7 +312,7 @@ def summarize(
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(
-        description="Transcribe audio with Whisper and summarize the result."
+        description="Transcribe audio with Whisper, save the transcript, and summarize the result."
     )
     parser.add_argument("audio", help="Path to the audio file to transcribe")
     parser.add_argument("output", help="Destination markdown file")
@@ -363,6 +363,11 @@ def main() -> None:
         api_key=api_key if method == "api" else None,
     )
     logger.info("Transcription complete.")
+
+    transcript_path = Path(args.output).with_suffix(".txt")
+    with open(transcript_path, "w", encoding="utf-8") as f:
+        f.write(transcript)
+    logger.info(f"Transcript written to {transcript_path}")
 
     logger.info("Summarizing transcript...")
     summary = summarize(prompt, transcript, summary_model, api_key, language)

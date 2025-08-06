@@ -230,6 +230,9 @@ class TranscribeGUI:
                 out_md = Path(output_dir) / (Path(audio).stem + ".md")
                 with open(out_md, "w", encoding="utf-8") as f:
                     f.write(markdown_content)
+                out_txt = Path(output_dir) / (Path(audio).stem + ".txt")
+                with open(out_txt, "w", encoding="utf-8") as f:
+                    f.write(transcript)
                 pdf_path = out_md.with_suffix(".pdf")
                 transcribe_summary.markdown_to_pdf(markdown_content, str(pdf_path))
                 self.step_progress()

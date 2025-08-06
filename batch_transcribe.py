@@ -1,12 +1,12 @@
 """Batch process audio files from the `audio` directory.
 
 This script processes all audio files placed in the `audio` directory and
-writes summarized Markdown and PDF files to the `output` directory. After a
-file is processed its name is stored in `processed.log` to avoid duplicate
-work.
+writes summarized Markdown, transcript text, and PDF files to the `output`
+directory. After a file is processed its name is stored in `processed.log`
+to avoid duplicate work.
 
-The output filename follows the pattern ``YYYYMMDD_NameOfTheFile.md`` with a
-matching ``.pdf`` file.
+The output filename follows the pattern ``YYYYMMDD_NameOfTheFile.md`` with
+matching ``.txt`` and ``.pdf`` files.
 """
 
 from __future__ import annotations
@@ -66,7 +66,7 @@ def _process_file(
     api_key: str,
     summary_model: str,
 ) -> None:
-    """Transcribe a single audio file and write its summary."""
+    """Transcribe a single audio file and write its transcript and summary."""
     logger.info(
         f"Transcribing {path.name} using {whisper_model} via {method}..."
     )
@@ -102,11 +102,15 @@ def _process_file(
     markdown_content = f"# {heading}\n\n" + summary + "\n"
     with output_path.open("w", encoding="utf-8") as f:
         f.write(markdown_content)
+    transcript_path = OUTPUT_DIR / f"{now:%Y%m%d}_{path.stem}.txt"
+    with transcript_path.open("w", encoding="utf-8") as f:
+        f.write(transcript)
     pdf_path = OUTPUT_DIR / f"{now:%Y%m%d}_{path.stem}.pdf"
     transcribe_summary.markdown_to_pdf(markdown_content, str(pdf_path))
     _append_processed(path.name, size_bytes, duration_sec, method, elapsed)
     logger.info(f"Finished: {output_path}")
     logger.info(f"PDF saved to {pdf_path}")
+    logger.info(f"Transcript saved to {transcript_path}")
 
 
 def main() -> None:
