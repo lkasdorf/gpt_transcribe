@@ -154,9 +154,13 @@ class TranscribeGUI:
         self.master.after(0, lambda: messagebox.showerror(title, msg))
 
     def select_audio(self) -> None:
-        paths = filedialog.askopenfilenames(filetypes=AUDIO_EXTS)
-        if paths:
-            self.audio_files = list(paths)
+        raw_paths = filedialog.askopenfilenames(filetypes=AUDIO_EXTS)
+        if raw_paths:
+            if isinstance(raw_paths, str):
+                paths = self.master.tk.splitlist(raw_paths)
+            else:
+                paths = raw_paths
+            self.audio_files = [str(Path(p).resolve()) for p in paths]
             self.audio_list.delete(0, tk.END)
             for p in self.audio_files:
                 self.audio_list.insert(tk.END, Path(p).name)
@@ -164,7 +168,7 @@ class TranscribeGUI:
     def select_output_dir(self) -> None:
         path = filedialog.askdirectory()
         if path:
-            self.output_dir_var.set(path)
+            self.output_dir_var.set(str(Path(path).resolve()))
 
     def start_transcription(self) -> None:
         if not self.audio_files:
@@ -173,6 +177,15 @@ class TranscribeGUI:
         output_dir = self.output_dir_var.get()
         if not output_dir:
             messagebox.showwarning("No output", "Please select an output directory.")
+            return
+        missing = [p for p in self.audio_files if not Path(p).is_file()]
+        if missing:
+            messagebox.showerror("Missing file", f"Audio file not found: {missing[0]}")
+            return
+        if not Path(output_dir).is_dir():
+            messagebox.showerror(
+                "Missing output", f"Output directory not found: {output_dir}"
+            )
             return
         self.progress["value"] = 0
         self.progress["maximum"] = len(self.audio_files) * 3

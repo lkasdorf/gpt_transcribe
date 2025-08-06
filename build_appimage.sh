@@ -94,6 +94,7 @@ echo "⚙️ Creating AppRun ..."
 cat > ${APPDIR}/AppRun << 'EOF'
 #!/bin/bash
 HERE="$(dirname "$(readlink -f "$0")")"
+export PATH="$HERE/usr/bin:$PATH"
 exec "$HERE/usr/bin/gpt_transcribe" "$@"
 EOF
 chmod +x ${APPDIR}/AppRun
