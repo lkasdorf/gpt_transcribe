@@ -80,8 +80,8 @@ Large MP3 or m4a files over 25 MB are automatically split into smaller chunks be
 API transcription.
 
 When executed the script prints which model is used and whether transcription happens
-locally or via the API. The summary will be written to the specified Markdown file and an accompanying
-PDF file with bookmarks.
+locally or via the API. The summary will be written to the specified Markdown file,
+the full transcript to a `.txt` file, and an accompanying PDF file with bookmarks.
 
 ## Batch transcription
 
@@ -96,10 +96,10 @@ python batch_transcribe.py --method api --language en
 to override them if needed.
 
 Summaries will be written to the `output` directory with filenames in the
-form `YYYYMMDD_NameOfTheFile.md` and a matching `.pdf` file. Successfully
-processed audio files are tracked in `processed.log` along with file size,
-duration, transcription method, transcription time and timestamp to avoid
-duplicate work.
+form `YYYYMMDD_NameOfTheFile.md`, along with matching `.txt` transcripts and
+`.pdf` files. Successfully processed audio files are tracked in
+`processed.log` along with file size, duration, transcription method,
+transcription time and timestamp to avoid duplicate work.
 
 ## GUI
 
