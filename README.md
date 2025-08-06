@@ -114,6 +114,25 @@ Whisper models or the summary prompt can be edited in the window and saved back 
 respective files. When an audio file is selected and transcribed, a Markdown file and
 matching PDF are written to the chosen location.
 
+## Troubleshooting
+
+If you see `[Errno 2] No such file or directory` when starting a transcription, the
+program could not locate the `ffmpeg` binary. When running the AppImage, a static
+`ffmpeg` is bundled and automatically added to the `PATH`, so no separate installation
+is required. If you built the project from source or an older AppImage, verify that
+`ffmpeg` is installed and available on your `PATH`:
+
+```bash
+ffmpeg -version
+```
+
+If the command is not found, install `ffmpeg` (for example with `sudo apt install ffmpeg`
+on Ubuntu) and try again.
+
+If `ffmpeg -version` works but the error persists, the message can also mean that the
+input audio file could not be found. Double‑check the path passed on the command line
+or selected in the GUI and ensure the file exists and is readable.
+
 ## Compiling the program
 
 Use [PyInstaller](https://pyinstaller.org/) to create a standalone executable. Include the
