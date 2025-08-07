@@ -411,29 +411,18 @@ def summarize(
                 sleep_for = random.uniform(1.0 * (2**attempt), 2.0 * (2**attempt))
                 time.sleep(sleep_for)
 
-    # Enforce only GPT-5 summary models
-    allowed_prefix = ("gpt-5",)
-    if not any(model_name.startswith(p) for p in allowed_prefix):
-        raise ValueError(
-            "Summary model must be a GPT-5 family model (e.g., gpt-5-mini, gpt-5, gpt-5-pro)."
-        )
-
-    # Preflight: check access to the requested GPT-5 model; provide a helpful error if missing
+    # Preflight: check access to the requested model; provide a helpful error if missing
     try:
         models = client.models.list()
         available_ids = {m.id for m in getattr(models, "data", [])}
         if model_name not in available_ids:
-            available_gpt5 = sorted(mid for mid in available_ids if mid.startswith("gpt-5"))
-            if available_gpt5:
-                raise ValueError(
-                    "The configured summary model is not accessible to this API key. "
-                    "Accessible GPT-5 models: " + ", ".join(available_gpt5)
-                )
-            else:
-                raise ValueError(
-                    "This API key does not have access to GPT-5 models. "
-                    "Please use a key with GPT-5 access or update the summary model to a GPT-5 you are entitled to."
-                )
+            # Suggest commonly used chat-capable models when available
+            chat_like = tuple(["gpt-4o", "gpt-4.1", "gpt-5"])  # show modern chat families
+            available_chat = sorted(mid for mid in available_ids if mid.startswith(chat_like))
+            hint = (" Some accessible chat models: " + ", ".join(available_chat)) if available_chat else ""
+            raise ValueError(
+                "The configured summary model is not accessible to this API key or does not exist." + hint
+            )
     except Exception:
         # If listing models fails, continue; the call below will retry and surface the API error
         pass

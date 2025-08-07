@@ -1,0 +1,8 @@
+{
+  "python.defaultInterpreterPath": "/home/leon/dev_cursor/gpt_transcribe/venv/bin/python",
+  "python.terminal.activateEnvironment": true,
+  "terminal.integrated.env.linux": {
+    "VIRTUAL_ENV": "/home/leon/dev_cursor/gpt_transcribe/venv",
+    "PATH": "/home/leon/dev_cursor/gpt_transcribe/venv/bin:${env:PATH}"
+  }
+}

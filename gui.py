@@ -23,6 +23,12 @@ AUDIO_EXTS = [
 ]
 
 SUMMARY_MODELS = [
+    # Curated list of commonly available chat models; GUI allows free text too
+    "gpt-4o-mini",
+    "gpt-4o",
+    "gpt-4.1",
+    "gpt-4.1-mini",
+    # Also include GPT-5 options if user has access
     "gpt-5-mini",
     "gpt-5",
     "gpt-5-pro",
