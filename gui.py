@@ -67,21 +67,69 @@ def load_whisper_models(
     return sorted(api_models), sorted(local_models)
 
 
+class ModernButton(tk.Button):
+    """A modern styled button with hover effects"""
+    def __init__(self, master, **kwargs):
+        # Default styling for modern buttons
+        kwargs.setdefault('relief', 'flat')
+        kwargs.setdefault('bd', 0)
+        kwargs.setdefault('padx', 15)
+        kwargs.setdefault('pady', 8)
+        kwargs.setdefault('font', ('Segoe UI', 9))
+        kwargs.setdefault('cursor', 'hand2')
+        
+        super().__init__(master, **kwargs)
+        
+        # Bind hover effects
+        self.bind('<Enter>', self._on_enter)
+        self.bind('<Leave>', self._on_leave)
+        
+    def _on_enter(self, event):
+        self.configure(bg='#e1e1e1')
+        
+    def _on_leave(self, event):
+        self.configure(bg='SystemButtonFace')
+
+
 class TranscribeGUI:
     def __init__(self, master: tk.Tk) -> None:
         self.master = master
-        master.title("gpt_transcribe")
-        master.minsize(500, 250)
+        master.title("GPT Transcribe")
+        master.minsize(700, 500)
+        master.configure(bg='#f5f5f5')
+        
+        # Configure grid weights
         master.columnconfigure(0, weight=1)
         master.rowconfigure(0, weight=1)
-        ttk.Style().theme_use("clam")
+        
+        # Apply modern theme
+        style = ttk.Style()
+        style.theme_use("clam")
+        
+        # Configure modern styles
+        style.configure('Title.TLabel', font=('Segoe UI', 16, 'bold'), foreground='#2c3e50')
+        style.configure('Header.TLabel', font=('Segoe UI', 11, 'bold'), foreground='#34495e')
+        style.configure('Info.TLabel', font=('Segoe UI', 9), foreground='#7f8c8d')
+        style.configure('Success.TLabel', font=('Segoe UI', 9), foreground='#27ae60')
+        style.configure('Error.TLabel', font=('Segoe UI', 9), foreground='#e74c3c')
+        
+        # Configure modern frame style
+        style.configure('Card.TFrame', background='white', relief='solid', borderwidth=1)
+        
+        # Configure modern progress bar
+        style.configure('Modern.Horizontal.TProgressbar', 
+                       background='#3498db', 
+                       troughcolor='#ecf0f1',
+                       borderwidth=0,
+                       lightcolor='#3498db',
+                       darkcolor='#3498db')
 
         self.config = transcribe_summary.load_config(CONFIG_PATH)
         transcribe_summary.ensure_prompt(PROMPT_PATH)
 
         self.audio_files: list[str] = []
         self.output_dir_var = tk.StringVar()
-        self.status_var = tk.StringVar()
+        self.status_var = tk.StringVar(value="Ready to transcribe")
 
         self.create_menu()
         self.create_main_widgets()
@@ -98,53 +146,151 @@ class TranscribeGUI:
         menubar.add_cascade(label="Menu", menu=app_menu)
 
     def create_main_widgets(self) -> None:
-        frame = ttk.Frame(self.master, padding=10)
-        frame.grid(row=0, column=0, sticky="nsew")
-        frame.columnconfigure(1, weight=1)
+        # Main container with padding
+        main_frame = ttk.Frame(self.master, style='Card.TFrame', padding=20)
+        main_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
+        main_frame.columnconfigure(1, weight=1)
 
-        ttk.Label(frame, text="Audio Files").grid(
-            row=0, column=0, sticky="ne", padx=5, pady=2
-        )
-        self.audio_list = tk.Listbox(frame, width=40, height=5)
-        self.audio_list.grid(row=0, column=1, padx=5, pady=2, sticky="we")
-        ttk.Button(frame, text="Browse", command=self.select_audio).grid(
-            row=0, column=2, padx=5, pady=2, sticky="nw"
-        )
+        # Title
+        title_label = ttk.Label(main_frame, text="GPT Transcribe", style='Title.TLabel')
+        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20), sticky="w")
 
-        ttk.Label(frame, text="Output Directory").grid(
-            row=1, column=0, sticky="e", padx=5, pady=2
-        )
-        ttk.Entry(frame, textvariable=self.output_dir_var, width=30).grid(
-            row=1, column=1, sticky="we", pady=2
-        )
-        ttk.Button(frame, text="Browse", command=self.select_output_dir).grid(
-            row=1, column=2, padx=5, pady=2
-        )
+        # Audio Files Section
+        audio_frame = ttk.LabelFrame(main_frame, text="Audio Files", padding=15)
+        audio_frame.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(0, 15))
+        audio_frame.columnconfigure(1, weight=1)
 
-        ttk.Label(frame, text="Method").grid(
-            row=2, column=0, sticky="e", padx=5, pady=2
+        ttk.Label(audio_frame, text="Selected Files:", style='Header.TLabel').grid(
+            row=0, column=0, sticky="w", pady=(0, 5)
+        )
+        
+        # Create a frame for the listbox and scrollbar
+        list_frame = ttk.Frame(audio_frame)
+        list_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 10))
+        list_frame.columnconfigure(0, weight=1)
+        
+        self.audio_list = tk.Listbox(
+            list_frame, 
+            height=6, 
+            font=('Segoe UI', 9),
+            selectmode='extended',
+            relief='solid',
+            bd=1,
+            bg='white',
+            fg='#2c3e50'
+        )
+        self.audio_list.grid(row=0, column=0, sticky="ew")
+        
+        # Add scrollbar to listbox
+        audio_scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=self.audio_list.yview)
+        audio_scrollbar.grid(row=0, column=1, sticky="ns")
+        self.audio_list.configure(yscrollcommand=audio_scrollbar.set)
+        
+        # Buttons frame
+        button_frame = ttk.Frame(audio_frame)
+        button_frame.grid(row=2, column=0, columnspan=2, sticky="w")
+        
+        ModernButton(
+            button_frame, 
+            text="📁 Add Audio Files", 
+            command=self.select_audio,
+            bg='#3498db',
+            fg='white'
+        ).pack(side="left", padx=(0, 10))
+        
+        ModernButton(
+            button_frame, 
+            text="🗑️ Clear All", 
+            command=self.clear_audio_files,
+            bg='#e74c3c',
+            fg='white'
+        ).pack(side="left")
+
+        # Output Directory Section
+        output_frame = ttk.LabelFrame(main_frame, text="Output Settings", padding=15)
+        output_frame.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(0, 15))
+        output_frame.columnconfigure(1, weight=1)
+
+        ttk.Label(output_frame, text="Output Directory:", style='Header.TLabel').grid(
+            row=0, column=0, sticky="w", pady=(0, 5)
+        )
+        
+        output_entry_frame = ttk.Frame(output_frame)
+        output_entry_frame.grid(row=1, column=0, columnspan=2, sticky="ew")
+        output_entry_frame.columnconfigure(0, weight=1)
+        
+        ttk.Entry(
+            output_entry_frame, 
+            textvariable=self.output_dir_var, 
+            font=('Segoe UI', 9)
+        ).grid(row=0, column=0, sticky="ew", padx=(0, 10))
+        
+        ModernButton(
+            output_entry_frame, 
+            text="📂 Browse", 
+            command=self.select_output_dir,
+            bg='#2ecc71',
+            fg='white'
+        ).grid(row=0, column=1)
+
+        # Transcription Settings Section
+        settings_frame = ttk.LabelFrame(main_frame, text="Transcription Settings", padding=15)
+        settings_frame.grid(row=3, column=0, columnspan=3, sticky="ew", pady=(0, 15))
+        settings_frame.columnconfigure(1, weight=1)
+
+        ttk.Label(settings_frame, text="Method:", style='Header.TLabel').grid(
+            row=0, column=0, sticky="w", pady=(0, 5)
         )
         self.method_var = tk.StringVar(
             value=self.config["general"].get("method", "api")
         )
-        ttk.Combobox(
-            frame,
+        method_combo = ttk.Combobox(
+            settings_frame,
             textvariable=self.method_var,
             values=["api", "local"],
             state="readonly",
-        ).grid(row=2, column=1, sticky="we", pady=2)
+            font=('Segoe UI', 9)
+        )
+        method_combo.grid(row=1, column=0, sticky="w")
+
+        # Progress Section
+        progress_frame = ttk.LabelFrame(main_frame, text="Progress", padding=15)
+        progress_frame.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(0, 15))
+        progress_frame.columnconfigure(0, weight=1)
 
         self.progress = ttk.Progressbar(
-            frame, length=200, mode="determinate"
+            progress_frame, 
+            style='Modern.Horizontal.TProgressbar',
+            mode="determinate"
         )
-        self.progress.grid(row=3, column=0, columnspan=3, sticky="we", padx=5, pady=10)
+        self.progress.grid(row=0, column=0, sticky="ew", pady=(0, 10))
 
-        ttk.Button(frame, text="Transcribe", command=self.start_transcription).grid(
-            row=4, column=1, pady=5, sticky="e"
+        # Status and action buttons
+        action_frame = ttk.Frame(main_frame)
+        action_frame.grid(row=5, column=0, columnspan=3, sticky="ew")
+        action_frame.columnconfigure(0, weight=1)
+
+        self.status_label = ttk.Label(
+            action_frame, 
+            textvariable=self.status_var, 
+            style='Info.TLabel'
         )
-        ttk.Label(frame, textvariable=self.status_var).grid(
-            row=4, column=2, sticky="w"
-        )
+        self.status_label.grid(row=0, column=0, sticky="w")
+
+        ModernButton(
+            action_frame, 
+            text="🎤 Start Transcription", 
+            command=self.start_transcription,
+            bg='#9b59b6',
+            fg='white',
+            font=('Segoe UI', 10, 'bold')
+        ).grid(row=0, column=1, sticky="e")
+
+    def clear_audio_files(self):
+        """Clear all selected audio files"""
+        self.audio_files.clear()
+        self.audio_list.delete(0, tk.END)
+        self.set_status("Ready to transcribe")
 
     def set_status(self, text: str) -> None:
         self.master.after(0, self.status_var.set, text)
@@ -169,6 +315,10 @@ class TranscribeGUI:
             self.audio_list.delete(0, tk.END)
             for p in self.audio_files:
                 self.audio_list.insert(tk.END, Path(p).name)
+            
+            # Update status
+            count = len(self.audio_files)
+            self.set_status(f"Ready to transcribe {count} file{'s' if count != 1 else ''}")
 
     def select_output_dir(self) -> None:
         path = filedialog.askdirectory()
@@ -242,10 +392,10 @@ class TranscribeGUI:
                 transcribe_summary.markdown_to_pdf(markdown_content, str(pdf_path))
                 self.step_progress()
 
-            self.set_status("Done")
+            self.set_status("✅ Transcription completed successfully!")
             self.show_info("Finished", f"Summaries written to {output_dir}")
         except Exception as e:
-            self.set_status("Error")
+            self.set_status("❌ Error occurred during transcription")
             self.show_error("Error", str(e))
 
     def open_settings(self) -> None:
@@ -254,8 +404,25 @@ class TranscribeGUI:
     def show_docs(self) -> None:
         doc_win = tk.Toplevel(self.master)
         doc_win.title("Documentation")
-        text = scrolledtext.ScrolledText(doc_win, width=80, height=30)
+        doc_win.configure(bg='#f5f5f5')
+        doc_win.minsize(800, 600)
+        
+        # Create a modern text widget with better styling
+        text_frame = ttk.Frame(doc_win, style='Card.TFrame', padding=10)
+        text_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        text = scrolledtext.ScrolledText(
+            text_frame, 
+            width=80, 
+            height=30,
+            font=('Consolas', 10),
+            bg='white',
+            fg='#2c3e50',
+            relief='flat',
+            bd=0
+        )
         text.pack(fill="both", expand=True)
+        
         try:
             content = transcribe_summary._load_text(README_PATH)
         except Exception as e:
@@ -268,9 +435,12 @@ class SettingsWindow(tk.Toplevel):
     def __init__(self, app: TranscribeGUI) -> None:
         super().__init__(app.master)
         self.app = app
-        self.title("Settings")
-        self.minsize(600, 400)
+        self.title("Settings - GPT Transcribe")
+        self.minsize(700, 500)
+        self.configure(bg='#f5f5f5')
         self.resizable(True, True)
+        
+        # Configure grid
         self.grid_columnconfigure(1, weight=1)
         self.grid_columnconfigure(2, weight=1)
         self.grid_rowconfigure(4, weight=1)
@@ -279,72 +449,116 @@ class SettingsWindow(tk.Toplevel):
         prompt_text = transcribe_summary._load_text(PROMPT_PATH)
         api_models, local_models = load_whisper_models()
 
-        ttk.Label(self, text="API Key").grid(
-            row=0, column=0, sticky="e", padx=5, pady=2
+        # Main container
+        main_frame = ttk.Frame(self, style='Card.TFrame', padding=20)
+        main_frame.grid(row=0, column=0, columnspan=3, sticky="nsew", padx=20, pady=20)
+        main_frame.columnconfigure(1, weight=1)
+
+        # Title
+        ttk.Label(main_frame, text="Settings", style='Title.TLabel').grid(
+            row=0, column=0, columnspan=3, pady=(0, 20), sticky="w"
+        )
+
+        # API Key
+        ttk.Label(main_frame, text="API Key:", style='Header.TLabel').grid(
+            row=1, column=0, sticky="w", padx=(0, 10), pady=5
         )
         # Prefer config key; fall back to OPENAI_API_KEY
         key_from_cfg = self.config["openai"].get("api_key", "").strip()
         if not key_from_cfg or key_from_cfg == "YOUR_API_KEY":
             key_from_cfg = os.getenv("OPENAI_API_KEY", "")
         self.api_key_var = tk.StringVar(value=key_from_cfg)
-        ttk.Entry(self, textvariable=self.api_key_var, width=60).grid(
-            row=0, column=1, columnspan=2, sticky="we", pady=2
-        )
+        ttk.Entry(
+            main_frame, 
+            textvariable=self.api_key_var, 
+            width=60,
+            font=('Segoe UI', 9),
+            show="*"
+        ).grid(row=1, column=1, columnspan=2, sticky="ew", pady=5)
 
-        ttk.Label(self, text="Summary Model").grid(
-            row=1, column=0, sticky="e", padx=5, pady=2
+        # Summary Model
+        ttk.Label(main_frame, text="Summary Model:", style='Header.TLabel').grid(
+            row=2, column=0, sticky="w", padx=(0, 10), pady=5
         )
         self.summary_model_var = tk.StringVar(
             value=self.config["openai"].get("summary_model", "")
         )
         self.summary_model_cb = ttk.Combobox(
-            self,
+            main_frame,
             textvariable=self.summary_model_var,
             values=SUMMARY_MODELS,
             state="normal",  # allow free text for future models
+            font=('Segoe UI', 9)
         )
-        self.summary_model_cb.grid(row=1, column=1, columnspan=2, sticky="we", pady=2)
+        self.summary_model_cb.grid(row=2, column=1, columnspan=2, sticky="ew", pady=5)
 
-        ttk.Label(self, text="Whisper API Model").grid(
-            row=2, column=0, sticky="e", padx=5, pady=2
+        # Whisper API Model
+        ttk.Label(main_frame, text="Whisper API Model:", style='Header.TLabel').grid(
+            row=3, column=0, sticky="w", padx=(0, 10), pady=5
         )
         self.api_model_var = tk.StringVar(
             value=self.config["whisper_api"].get("model", "")
         )
         self.api_model_cb = ttk.Combobox(
-            self,
+            main_frame,
             textvariable=self.api_model_var,
             values=api_models,
             state="readonly",
+            font=('Segoe UI', 9)
         )
-        self.api_model_cb.grid(row=2, column=1, columnspan=2, sticky="we", pady=2)
+        self.api_model_cb.grid(row=3, column=1, columnspan=2, sticky="ew", pady=5)
 
-        ttk.Label(self, text="Whisper Local Model").grid(
-            row=3, column=0, sticky="e", padx=5, pady=2
+        # Whisper Local Model
+        ttk.Label(main_frame, text="Whisper Local Model:", style='Header.TLabel').grid(
+            row=4, column=0, sticky="w", padx=(0, 10), pady=5
         )
         self.local_model_var = tk.StringVar(
             value=self.config["whisper_local"].get("model", "")
         )
         self.local_model_cb = ttk.Combobox(
-            self,
+            main_frame,
             textvariable=self.local_model_var,
             values=local_models,
             state="readonly",
+            font=('Segoe UI', 9)
         )
-        self.local_model_cb.grid(row=3, column=1, columnspan=2, sticky="we", pady=2)
+        self.local_model_cb.grid(row=4, column=1, columnspan=2, sticky="ew", pady=5)
 
-        ttk.Label(self, text="Summary Prompt").grid(
-            row=4, column=0, sticky="ne", padx=5, pady=2
+        # Summary Prompt
+        ttk.Label(main_frame, text="Summary Prompt:", style='Header.TLabel').grid(
+            row=5, column=0, sticky="nw", padx=(0, 10), pady=(20, 5)
         )
-        self.prompt_box = scrolledtext.ScrolledText(self, height=10, width=60)
-        self.prompt_box.grid(
-            row=4, column=1, columnspan=2, sticky="nsew", padx=5, pady=2
+        
+        prompt_frame = ttk.Frame(main_frame)
+        prompt_frame.grid(row=6, column=0, columnspan=3, sticky="nsew", pady=5)
+        prompt_frame.columnconfigure(0, weight=1)
+        prompt_frame.rowconfigure(0, weight=1)
+        
+        self.prompt_box = scrolledtext.ScrolledText(
+            prompt_frame, 
+            height=12, 
+            width=60,
+            font=('Consolas', 9),
+            bg='white',
+            fg='#2c3e50',
+            relief='solid',
+            bd=1
         )
+        self.prompt_box.grid(row=0, column=0, sticky="nsew")
         self.prompt_box.insert("1.0", prompt_text)
 
-        ttk.Button(self, text="Save", command=self.save_settings).grid(
-            row=5, column=2, sticky="e", pady=5
-        )
+        # Buttons
+        button_frame = ttk.Frame(main_frame)
+        button_frame.grid(row=7, column=0, columnspan=3, sticky="ew", pady=(20, 0))
+        button_frame.columnconfigure(1, weight=1)
+
+        ModernButton(
+            button_frame, 
+            text="💾 Save Settings", 
+            command=self.save_settings,
+            bg='#27ae60',
+            fg='white'
+        ).grid(row=0, column=2, sticky="e")
 
     def save_settings(self) -> None:
         self.config["openai"]["api_key"] = self.api_key_var.get().strip()
@@ -358,7 +572,7 @@ class SettingsWindow(tk.Toplevel):
         with open(PROMPT_PATH, "w", encoding="utf-8") as f:
             f.write(self.prompt_box.get("1.0", "end").strip())
         self.app.config = self.config
-        messagebox.showinfo("Saved", "Configuration updated.")
+        messagebox.showinfo("Saved", "Configuration updated successfully!")
         self.destroy()
 
 
