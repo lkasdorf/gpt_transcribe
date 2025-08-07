@@ -47,6 +47,7 @@ if command -v docker >/dev/null 2>&1 && [ "$USE_DOCKER" = "1" ]; then
       FFMPEG_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"; \
       FFMPEG_TAR="$PACKAGES_DIR/ffmpeg-release-amd64-static.tar.xz"; \
       ICON_SOURCE="/src/logo/logo.png"; ICON_NAME="gpt_transcribe.png"; \
+      OUTPUT_APPIMAGE="$DIST_DIR/${APP_NAME}-x86_64.AppImage"; \
       
       apt-get update && \
       apt-get install -y --no-install-recommends \
@@ -72,7 +73,7 @@ if command -v docker >/dev/null 2>&1 && [ "$USE_DOCKER" = "1" ]; then
         --hidden-import=audioop \
         "/src/${MAIN_SCRIPT}" && \
       # Prepare AppDir
-      mkdir -p ${APPDIR}/usr/bin ${APPDIR}/usr/lib ${APPDIR}/usr/share/applications ${APPDIR}/usr/share/metainfo ${APPDIR}/usr/share/icons/hicolor/256x256/apps && \
+      mkdir -p ${APPDIR} ${APPDIR}/usr/bin ${APPDIR}/usr/lib ${APPDIR}/usr/share/applications ${APPDIR}/usr/share/metainfo ${APPDIR}/usr/share/icons/hicolor/256x256/apps && \
       cp "$DIST_DIR/${MAIN_SCRIPT%.py}" ${APPDIR}/usr/bin/gpt_transcribe && \
       # Copy Tcl/Tk runtimes and data (best-effort)
       cp /usr/lib/x86_64-linux-gnu/libtcl8.6.so ${APPDIR}/usr/lib/ || true && \
@@ -119,7 +120,12 @@ EOF
       chown -R "$HOST_UID:$HOST_GID" /src/dist /src/packages || true
     '
 
-  echo "✅ Done: AppImage created at ${OUTPUT_APPIMAGE}"
+  if [ -f "${OUTPUT_APPIMAGE}" ]; then
+    echo "✅ Done: AppImage created at ${OUTPUT_APPIMAGE}"
+  else
+    echo "❌ Build finished, but AppImage not found at ${OUTPUT_APPIMAGE}" >&2
+    exit 1
+  fi
 else
   echo "⚠️  Docker not available or disabled. Building natively (compatibility may be reduced)."
 
@@ -199,6 +205,11 @@ EOF
   echo "📦 Creating AppImage with $APPIMAGETOOL ..."
   "$APPIMAGETOOL" ${APPDIR} ${OUTPUT_APPIMAGE}
 
-  echo "✅ Done: AppImage created at ${OUTPUT_APPIMAGE}"
+  if [ -f "${OUTPUT_APPIMAGE}" ]; then
+    echo "✅ Done: AppImage created at ${OUTPUT_APPIMAGE}"
+  else
+    echo "❌ Build finished, but AppImage not found at ${OUTPUT_APPIMAGE}" >&2
+    exit 1
+  fi
 fi
 
