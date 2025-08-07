@@ -6,7 +6,7 @@ command: gpt_transcribe
 finish-args:
   - --share=network
   - --socket=x11
-  - --env=PYTHONPATH=/app/lib/python3.11/site-packages
+  - --socket=wayland
   - --env=TCL_LIBRARY=/app/lib/tcl8.6
   - --env=TK_LIBRARY=/app/lib/tk8.6
 modules:
@@ -30,36 +30,28 @@ modules:
       - type: archive
         url: https://prdownloads.sourceforge.net/tcl/tk8.6.13-src.tar.gz
         sha256: 2e65fa069a23365440a3c56c556b8673b5e32a283800d8d9b257e3f584ce0675
-  - name: python-deps
-    buildsystem: simple
-    build-options:
-        build-args:
-          - --share=network
-        env:
-          PYTHONPATH: /app/lib/python3.11/site-packages
-    build-commands:
-      - pip3 install --no-cache-dir --prefix=/app -r requirements.txt
-    sources:
-      - type: file
-        path: requirements.txt
   - name: ffmpeg
     buildsystem: simple
     sources:
       - type: archive
-        path: ffmpeg-release-amd64-static.tar.xz
-        sha256: abda8d77ce8309141f83ab8edf0596834087c52467f6badf376a6a2a4c87cf67
+        path: packages/ffmpeg-release-amd64-static.tar.xz
         strip-components: 1
     build-commands:
       - install -Dm755 ffmpeg /app/bin/ffmpeg
       - install -Dm755 ffprobe /app/bin/ffprobe
   - name: gpt_transcribe
     buildsystem: simple
+    build-options:
+      build-args:
+        - --share=network
     build-commands:
-      - install -Dm755 gui.py /app/bin/gpt_transcribe
-      - install -Dm644 transcribe_summary.py /app/bin/transcribe_summary.py
-      - install -Dm644 summary_prompt.txt /app/bin/summary_prompt.txt
-      - install -Dm644 config.template.cfg /app/bin/config.template.cfg
-      - install -Dm644 README.md /app/bin/README.md
+      - pip3 install --no-cache-dir -r requirements.txt
+      - pip3 install --no-cache-dir pyinstaller audioop-lts
+      - pyinstaller gui.py --name gpt_transcribe --noconsole --onefile --collect-data whisper --add-data "config.template.cfg:." --add-data "summary_prompt.txt:." --add-data "README.md:."
+      - install -Dm755 dist/gpt_transcribe /app/bin/gpt_transcribe
+      - install -Dm644 summary_prompt.txt /app/share/gpt_transcribe/summary_prompt.txt
+      - install -Dm644 config.template.cfg /app/share/gpt_transcribe/config.template.cfg
+      - install -Dm644 README.md /app/share/gpt_transcribe/README.md
       - install -Dm644 logo/logo-256.png /app/share/icons/hicolor/256x256/apps/io.github.gpt_transcribe.png
       - install -Dm644 io.github.gpt_transcribe.desktop /app/share/applications/io.github.gpt_transcribe.desktop
       - install -Dm644 io.github.gpt_transcribe.metainfo.xml /app/share/metainfo/io.github.gpt_transcribe.metainfo.xml
