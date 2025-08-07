@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
 # Redirect all output to a log file
 LOG_DIR="./logs"
@@ -14,114 +14,173 @@ DISPLAY_NAME="GPT Transcribe"
 MAIN_SCRIPT="gui.py"
 ICON_SOURCE="logo/logo.png"
 ICON_NAME="gpt_transcribe.png"
-PACKAGES_DIR="./packages"
+PACKAGES_DIR="$(pwd)/packages"
 APPIMAGETOOL="${PACKAGES_DIR}/appimagetool-x86_64.AppImage"
 APPIMAGETOOL_URL="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
 FFMPEG_URL="https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
 FFMPEG_TAR="${PACKAGES_DIR}/ffmpeg-release-amd64-static.tar.xz"
-DIST_DIR="./dist"
+DIST_DIR="$(pwd)/dist"
 APPDIR="${APP_NAME}.AppDir"
 OUTPUT_APPIMAGE="${DIST_DIR}/${APP_NAME}-x86_64.AppImage"
+USE_DOCKER=${USE_DOCKER:-1}
+DOCKER_IMAGE=${DOCKER_IMAGE:-ubuntu:20.04}
 
 echo "📦 Starting AppImage build for $DISPLAY_NAME"
 
-mkdir -p "$PACKAGES_DIR"
+mkdir -p "$PACKAGES_DIR" "$DIST_DIR"
 
-# === Check: appimagetool present? ===
-if [ ! -f "$APPIMAGETOOL" ]; then
-    echo "⬇️  Downloading appimagetool ..."
-    curl -L -o "$APPIMAGETOOL" "$APPIMAGETOOL_URL"
-    chmod +x "$APPIMAGETOOL"
-else
-    echo "✅ appimagetool already present."
-fi
+if command -v docker >/dev/null 2>&1 && [ "$USE_DOCKER" = "1" ]; then
+  echo "🐳 Building inside Docker container ($DOCKER_IMAGE) for broad glibc compatibility ..."
 
-# === Check: ffmpeg present? ===
-if [ ! -f "$FFMPEG_TAR" ]; then
-    echo "⬇️  Downloading ffmpeg ..."
-    curl -L -o "$FFMPEG_TAR" "$FFMPEG_URL"
-else
-    echo "✅ ffmpeg archive already present."
-fi
-
-# === Cleanup ===
-echo "🧹 Removing old builds ..."
-rm -rf build/ dist/ ${APPDIR} __pycache__ *.spec
-mkdir -p "$DIST_DIR"
-
-# === Prerequisites ===
-echo "ℹ️  Python dependencies and PyInstaller must already be installed."
-
-# Ensure audioop is present; install audioop-lts if missing
-if ! python -c "import audioop" &>/dev/null; then
-    echo "⬇️  Installing audioop-lts as a replacement for deprecated pyaudioop ..."
-    pip install --no-cache-dir audioop-lts
-fi
-
-# Ensure Tkinter is available for the GUI
-if ! python -c "import tkinter" &>/dev/null; then
-    echo "⬇️  Installing python3-tk for Tkinter support ..."
-    apt-get update
-    apt-get install -y python3-tk
-fi
-
-# === Build with PyInstaller ===
-echo "⚙️  Building the Python program with PyInstaller ..."
-# Bundle Whisper's assets like mel_filters.npz
-pyinstaller --onefile \
-    --collect-data whisper \
-    --add-data "config.template.cfg:." \
-    --add-data "summary_prompt.txt:." \
-    --add-data "README.md:." \
-    --hidden-import=audioop \
-    ${MAIN_SCRIPT}
-
-# === Prepare AppDir structure ===
-echo "📁 Creating AppDir structure ..."
-mkdir -p ${APPDIR}/usr/bin
-cp ${DIST_DIR}/${MAIN_SCRIPT%.py} ${APPDIR}/usr/bin/gpt_transcribe
-cp ${ICON_SOURCE} ${APPDIR}/${ICON_NAME}
-
-# Provide ffmpeg inside AppImage
-TMP_FFMPEG=$(mktemp -d)
-tar -xf "$FFMPEG_TAR" -C "$TMP_FFMPEG" --strip-components=1
-cp "$TMP_FFMPEG/ffmpeg" "${APPDIR}/usr/bin/ffmpeg"
-cp "$TMP_FFMPEG/ffprobe" "${APPDIR}/usr/bin/ffprobe"
-rm -rf "$TMP_FFMPEG"
-
-# === Create AppRun ===
-echo "⚙️ Creating AppRun ..."
-cat > ${APPDIR}/AppRun << 'EOF'
-#!/bin/bash
-HERE="$(dirname "$(readlink -f "$0")")"
-export PATH="$HERE/usr/bin:$PATH"
-exec "$HERE/usr/bin/gpt_transcribe" "$@"
-EOF
-chmod +x ${APPDIR}/AppRun
-
-# === Create .desktop file ===
-echo "🖼 Creating .desktop file ..."
-cat > ${APPDIR}/gpt_transcribe.desktop <<EOF
+  docker run --rm \
+    -e DEBIAN_FRONTEND=noninteractive \
+    -v "$(pwd)":"/src" \
+    -w "/src" \
+    "$DOCKER_IMAGE" bash -eu -o pipefail -c "
+      apt-get update && \
+      apt-get install -y --no-install-recommends \
+        python3 python3-venv python3-pip python3-tk \
+        curl ca-certificates patchelf xz-utils \
+        tcl tk \
+        build-essential && \
+      python3 -m pip install --upgrade pip && \
+      python3 -m venv .venv && . .venv/bin/activate && \
+      pip install --no-cache-dir -r requirements.txt pyinstaller audioop-lts && \
+      # Ensure appimagetool and ffmpeg archives
+      mkdir -p packages dist && \
+      if [ ! -f "$APPIMAGETOOL" ]; then curl -L -o "$APPIMAGETOOL" "$APPIMAGETOOL_URL"; chmod +x "$APPIMAGETOOL"; fi && \
+      if [ ! -f "$FFMPEG_TAR" ]; then curl -L -o "$FFMPEG_TAR" "$FFMPEG_URL"; fi && \
+      # Clean old artifacts
+      rm -rf build/ dist/${APP_NAME}* ${APPDIR} __pycache__ *.spec && \
+      # Build PyInstaller onefile and bundle whisper data
+      pyinstaller --onefile \
+        --collect-data whisper \
+        --add-data 'config.template.cfg:.' \
+        --add-data 'summary_prompt.txt:.' \
+        --add-data 'README.md:.' \
+        --hidden-import=audioop \
+        ${MAIN_SCRIPT} && \
+      # Prepare AppDir
+      mkdir -p ${APPDIR}/usr/bin ${APPDIR}/usr/lib ${APPDIR}/usr/share/applications ${APPDIR}/usr/share/metainfo ${APPDIR}/usr/share/icons/hicolor/256x256/apps && \
+      cp dist/${MAIN_SCRIPT%.py} ${APPDIR}/usr/bin/gpt_transcribe && \
+      # Copy Tcl/Tk runtimes and data
+      cp /usr/lib/x86_64-linux-gnu/libtcl8.6.so ${APPDIR}/usr/lib/ || true && \
+      cp /usr/lib/x86_64-linux-gnu/libtk8.6.so ${APPDIR}/usr/lib/ || true && \
+      cp -r /usr/lib/tcl8.6 ${APPDIR}/usr/lib/ || true && \
+      cp -r /usr/lib/tk8.6 ${APPDIR}/usr/lib/ || true && \
+      # Provide ffmpeg inside AppImage
+      TMP_FFMPEG=$(mktemp -d) && \
+      tar -xf "$FFMPEG_TAR" -C "$TMP_FFMPEG" --strip-components=1 && \
+      cp "$TMP_FFMPEG/ffmpeg" "${APPDIR}/usr/bin/ffmpeg" && \
+      cp "$TMP_FFMPEG/ffprobe" "${APPDIR}/usr/bin/ffprobe" && \
+      rm -rf "$TMP_FFMPEG" && \
+      # Icon and desktop files
+      cp ${ICON_SOURCE} ${APPDIR}/usr/share/icons/hicolor/256x256/apps/${ICON_NAME} && \
+      cat > ${APPDIR}/gpt_transcribe.desktop <<EOF
 [Desktop Entry]
 Type=Application
 Name=${DISPLAY_NAME}
 Exec=gpt_transcribe
-Icon=${ICON_NAME%.png}
+Icon=gpt_transcribe
 Comment=${DISPLAY_NAME} AppImage
 Categories=Utility;
 EOF
+      cp io.github.gpt_transcribe.metainfo.xml ${APPDIR}/usr/share/metainfo/io.github.gpt_transcribe.metainfo.xml && \
+      # AppRun with env for Tcl/Tk and rpath
+      cat > ${APPDIR}/AppRun << 'EOF'
+#!/bin/bash
+set -e
+HERE="$(dirname "$(readlink -f "$0")")"
+export PATH="$HERE/usr/bin:$PATH"
+export LD_LIBRARY_PATH="$HERE/usr/lib:${LD_LIBRARY_PATH:-}"
+export TCL_LIBRARY="$HERE/usr/lib/tcl8.6"
+export TK_LIBRARY="$HERE/usr/lib/tk8.6"
+exec "$HERE/usr/bin/gpt_transcribe" "$@"
+EOF
+      chmod +x ${APPDIR}/AppRun && \
+      # Build AppImage
+      "$APPIMAGETOOL" ${APPDIR} ${OUTPUT_APPIMAGE}
+    "
 
-# Include AppStream metadata to avoid appimagetool warnings
-mkdir -p ${APPDIR}/usr/share/metainfo
-cp io.github.gpt_transcribe.metainfo.xml ${APPDIR}/usr/share/metainfo/io.github.gpt_transcribe.metainfo.xml
+  echo "✅ Done: AppImage created at ${OUTPUT_APPIMAGE}"
+else
+  echo "⚠️  Docker not available or disabled. Building natively (compatibility may be reduced)."
 
-# === Create AppImage ===
-echo "📦 Creating AppImage with $APPIMAGETOOL ..."
-./$APPIMAGETOOL ${APPDIR} ${OUTPUT_APPIMAGE}
+  # === Check: appimagetool present? ===
+  if [ ! -f "$APPIMAGETOOL" ]; then
+      echo "⬇️  Downloading appimagetool ..."
+      curl -L -o "$APPIMAGETOOL" "$APPIMAGETOOL_URL"
+      chmod +x "$APPIMAGETOOL"
+  else
+      echo "✅ appimagetool already present."
+  fi
 
-echo "✅ Done: AppImage created at ${OUTPUT_APPIMAGE}"
+  # === Check: ffmpeg present? ===
+  if [ ! -f "$FFMPEG_TAR" ]; then
+      echo "⬇️  Downloading ffmpeg ..."
+      curl -L -o "$FFMPEG_TAR" "$FFMPEG_URL"
+  else
+      echo "✅ ffmpeg archive already present."
+  fi
 
-# === Test run (optional) ===
-echo "🚀 Starting test run of the AppImage ..."
-${OUTPUT_APPIMAGE}
+  echo "🧹 Removing old builds ..."
+  rm -rf build/ dist/ ${APPDIR} __pycache__ *.spec
+  mkdir -p "$DIST_DIR"
+
+  echo "⚙️  Building the Python program with PyInstaller ..."
+  pyinstaller --onefile \
+      --collect-data whisper \
+      --add-data "config.template.cfg:." \
+      --add-data "summary_prompt.txt:." \
+      --add-data "README.md:." \
+      --hidden-import=audioop \
+      ${MAIN_SCRIPT}
+
+  echo "📁 Creating AppDir structure ..."
+  mkdir -p ${APPDIR}/usr/bin ${APPDIR}/usr/lib ${APPDIR}/usr/share/applications ${APPDIR}/usr/share/metainfo ${APPDIR}/usr/share/icons/hicolor/256x256/apps
+  cp ${DIST_DIR}/${MAIN_SCRIPT%.py} ${APPDIR}/usr/bin/gpt_transcribe
+  # Try to include Tcl/Tk
+  cp /usr/lib/x86_64-linux-gnu/libtcl*.so ${APPDIR}/usr/lib/ 2>/dev/null || true
+  cp /usr/lib/x86_64-linux-gnu/libtk*.so ${APPDIR}/usr/lib/ 2>/dev/null || true
+  cp -r /usr/lib/tcl* ${APPDIR}/usr/lib/ 2>/dev/null || true
+  cp -r /usr/lib/tk* ${APPDIR}/usr/lib/ 2>/dev/null || true
+  
+  # Provide ffmpeg inside AppImage
+  TMP_FFMPEG=$(mktemp -d)
+  tar -xf "$FFMPEG_TAR" -C "$TMP_FFMPEG" --strip-components=1
+  cp "$TMP_FFMPEG/ffmpeg" "${APPDIR}/usr/bin/ffmpeg"
+  cp "$TMP_FFMPEG/ffprobe" "${APPDIR}/usr/bin/ffprobe"
+  rm -rf "$TMP_FFMPEG"
+
+  # AppRun
+  cat > ${APPDIR}/AppRun << 'EOF'
+#!/bin/bash
+set -e
+HERE="$(dirname "$(readlink -f "$0")")"
+export PATH="$HERE/usr/bin:$PATH"
+export LD_LIBRARY_PATH="$HERE/usr/lib:${LD_LIBRARY_PATH:-}"
+export TCL_LIBRARY="$HERE/usr/lib/tcl8.6"
+export TK_LIBRARY="$HERE/usr/lib/tk8.6"
+exec "$HERE/usr/bin/gpt_transcribe" "$@"
+EOF
+  chmod +x ${APPDIR}/AppRun
+
+  # .desktop and icon
+  cat > ${APPDIR}/gpt_transcribe.desktop <<EOF
+[Desktop Entry]
+Type=Application
+Name=${DISPLAY_NAME}
+Exec=gpt_transcribe
+Icon=gpt_transcribe
+Comment=${DISPLAY_NAME} AppImage
+Categories=Utility;
+EOF
+  cp ${ICON_SOURCE} ${APPDIR}/usr/share/icons/hicolor/256x256/apps/${ICON_NAME}
+  cp io.github.gpt_transcribe.metainfo.xml ${APPDIR}/usr/share/metainfo/io.github.gpt_transcribe.metainfo.xml
+
+  echo "📦 Creating AppImage with $APPIMAGETOOL ..."
+  "$APPIMAGETOOL" ${APPDIR} ${OUTPUT_APPIMAGE}
+
+  echo "✅ Done: AppImage created at ${OUTPUT_APPIMAGE}"
+fi
 

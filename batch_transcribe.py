@@ -130,6 +130,12 @@ def main() -> None:
         default=None,
         help="Language for the generated summaries",
     )
+    parser.add_argument(
+        "--max-workers",
+        type=int,
+        default=3,
+        help="Maximum parallel workers for processing files",
+    )
     args = parser.parse_args()
 
     if not transcribe_summary.check_ffmpeg():
@@ -139,7 +145,7 @@ def main() -> None:
 
     method = args.method or config["general"].get("method", "api")
     language = args.language or config["general"].get("language", "en")
-    api_key = config["openai"]["api_key"]
+    api_key = transcribe_summary.get_api_key(config)
     summary_model = config["openai"]["summary_model"]
     whisper_section = "whisper_api" if method == "api" else "whisper_local"
     whisper_model = config[whisper_section]["model"]
@@ -162,7 +168,7 @@ def main() -> None:
             continue
         to_process.append(audio_file)
 
-    with ThreadPoolExecutor() as ex:
+    with ThreadPoolExecutor(max_workers=args.max_workers) as ex:
         futures = [
             ex.submit(
                 _process_file,

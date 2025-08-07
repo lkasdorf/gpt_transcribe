@@ -52,8 +52,8 @@ default. If you prefer a GPU-enabled build, install PyTorch separately from
    - Edit `config.cfg` to set `api_key`, choose the transcription `method` and summary `language`,
      and pick Whisper models in the `[whisper_api]` and `[whisper_local]` sections.
    - The default summary prompt is stored in `summary_prompt.txt` and can be customized.
-   - On Linux these files reside in `~/.config/GTP_Transcribe`.
-   `config.cfg` is ignored by git so your API key stays private.
+   - On Linux these files reside in `~/.config/GPT_Transcribe` (older `GTP_Transcribe` is still recognized). You can also set `GPT_TRANSCRIBE_BASE_DIR` to override.
+   `config.cfg` is ignored by git so your API key stays private. If the config key is unset, `OPENAI_API_KEY` is used.
 2. Run the script:
 
 ```bash
@@ -70,9 +70,9 @@ Use command-line flags to override the config file:
 # Local transcription with German summary
 python3 transcribe_summary.py audio.m4a summary.md --method local --language de
 
-# Custom prompt and summary model
+# Custom prompt and summary model (only GPT-5 models are supported)
 python3 transcribe_summary.py audio.m4a summary.md \
-  --summary-model gpt-3.5-turbo \
+  --summary-model gpt-5-mini \
   --prompt-file other_prompt.txt
 ```
 
@@ -83,6 +83,23 @@ When executed the script prints which model is used and whether transcription ha
 locally or via the API. The summary will be written to the specified Markdown file,
 the full transcript to a `.txt` file, and an accompanying PDF file with bookmarks.
 
+Additional flags:
+
+```bash
+# write outputs to a specific directory and skip PDF
+python3 transcribe_summary.py audio.m4a mysummary.md --output-dir out --no-pdf
+
+# choose exact output formats
+python3 transcribe_summary.py audio.m4a mysummary.md --formats md txt
+```
+
+Additional flags:
+
+```bash
+# write outputs to a specific directory and skip PDF
+python3 transcribe_summary.py audio.m4a mysummary.md --output-dir out --no-pdf
+```
+
 ## Batch transcription
 
 To process many audio files automatically, place them in the `audio` directory
@@ -92,7 +109,7 @@ and run:
 python batch_transcribe.py --method api --language en
 ```
 
-`batch_transcribe.py` reads defaults from `config.cfg`. Use `--method` or `--language`
+`batch_transcribe.py` reads defaults from `config.cfg`. Use `--method`, `--language` or `--max-workers`
 to override them if needed.
 
 Summaries will be written to the `output` directory with filenames in the
@@ -140,7 +157,7 @@ template config, prompt and README so the application can recreate defaults on f
 
 ```bash
 # adjust the path separator for your platform (; on Windows, : on Linux/macOS)
-pyinstaller gui.py --name gpt_transcribe --noconsole --onefile --add-data "config.template.cfg;." --add-data "summary_prompt.txt;." --add-data "README.md;." --icon logo/logo.ico
+pyinstaller gui.py --name gpt_transcribe --noconsole --onefile --collect-data whisper --add-data "config.template.cfg;." --add-data "summary_prompt.txt;." --add-data "README.md;." --icon logo/logo.ico
 ```
 
 The resulting binary in `dist/` can be executed directly or packaged as shown below.

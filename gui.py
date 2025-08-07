@@ -6,6 +6,7 @@ from tkinter import ttk
 from pathlib import Path
 import threading
 
+import os
 import transcribe_summary
 
 BASE_DIR = transcribe_summary.BASE_DIR
@@ -22,29 +23,9 @@ AUDIO_EXTS = [
 ]
 
 SUMMARY_MODELS = [
-    "gpt-4o",
-    "gpt-4o-mini",
-    "gpt-4o-mini-search-preview",
-    "gpt-4o-search-preview",
-    "gpt-4o-audio-preview",
-    "gpt-4o-realtime-preview",
-    "gpt-4.1",
-    "gpt-4.1-mini",
-    "gpt-4.1-nano",
-    "o1",
-    "o1-mini",
-    "o1-pro",
-    "o3",
-    "o3-mini",
-    "o3-mini-high",
-    "o3-pro",
-    "o3-deep-research",
-    "o4-mini",
-    "o4-mini-deep-research",
-    "gpt-4.5-preview",
-    "computer-use-preview",
-    "codex-mini-latest",
-    "gpt-image-1",
+    "gpt-5-mini",
+    "gpt-5",
+    "gpt-5-pro",
 ]
 
 
@@ -301,9 +282,11 @@ class SettingsWindow(tk.Toplevel):
         ttk.Label(self, text="API Key").grid(
             row=0, column=0, sticky="e", padx=5, pady=2
         )
-        self.api_key_var = tk.StringVar(
-            value=self.config["openai"].get("api_key", "")
-        )
+        # Prefer config key; fall back to OPENAI_API_KEY
+        key_from_cfg = self.config["openai"].get("api_key", "").strip()
+        if not key_from_cfg or key_from_cfg == "YOUR_API_KEY":
+            key_from_cfg = os.getenv("OPENAI_API_KEY", "")
+        self.api_key_var = tk.StringVar(value=key_from_cfg)
         ttk.Entry(self, textvariable=self.api_key_var, width=60).grid(
             row=0, column=1, columnspan=2, sticky="we", pady=2
         )
@@ -318,7 +301,7 @@ class SettingsWindow(tk.Toplevel):
             self,
             textvariable=self.summary_model_var,
             values=SUMMARY_MODELS,
-            state="readonly",
+            state="normal",  # allow free text for future models
         )
         self.summary_model_cb.grid(row=1, column=1, columnspan=2, sticky="we", pady=2)
 
