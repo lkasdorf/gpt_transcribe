@@ -21,7 +21,31 @@ AUDIO_EXTS = [
     ("All Files", "*.*"),
 ]
 
-SUMMARY_MODELS = ["gpt-4o-mini", "gpt-4o"]
+SUMMARY_MODELS = [
+    "gpt-4o",
+    "gpt-4o-mini",
+    "gpt-4o-mini-search-preview",
+    "gpt-4o-search-preview",
+    "gpt-4o-audio-preview",
+    "gpt-4o-realtime-preview",
+    "gpt-4.1",
+    "gpt-4.1-mini",
+    "gpt-4.1-nano",
+    "o1",
+    "o1-mini",
+    "o1-pro",
+    "o3",
+    "o3-mini",
+    "o3-mini-high",
+    "o3-pro",
+    "o3-deep-research",
+    "o4-mini",
+    "o4-mini-deep-research",
+    "gpt-4.5-preview",
+    "computer-use-preview",
+    "codex-mini-latest",
+    "gpt-image-1",
+]
 
 
 def load_whisper_models(
