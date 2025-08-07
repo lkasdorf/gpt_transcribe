@@ -76,6 +76,7 @@ if command -v docker >/dev/null 2>&1 && [ "$USE_DOCKER" = "1" ]; then
       rm -rf "$TMP_FFMPEG" && \
       # Icon and desktop files
       cp ${ICON_SOURCE} ${APPDIR}/usr/share/icons/hicolor/256x256/apps/${ICON_NAME} && \
+      cp ${ICON_SOURCE} ${APPDIR}/gpt_transcribe.png && \
       cat > ${APPDIR}/gpt_transcribe.desktop <<EOF
 [Desktop Entry]
 Type=Application
@@ -176,6 +177,7 @@ Comment=${DISPLAY_NAME} AppImage
 Categories=Utility;
 EOF
   cp ${ICON_SOURCE} ${APPDIR}/usr/share/icons/hicolor/256x256/apps/${ICON_NAME}
+  cp ${ICON_SOURCE} ${APPDIR}/gpt_transcribe.png
   cp io.github.gpt_transcribe.metainfo.xml ${APPDIR}/usr/share/metainfo/io.github.gpt_transcribe.metainfo.xml
 
   echo "📦 Creating AppImage with $APPIMAGETOOL ..."
