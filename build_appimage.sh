@@ -70,10 +70,10 @@ if command -v docker >/dev/null 2>&1 && [ "$USE_DOCKER" = "1" ]; then
       cp -r /usr/lib/tk8.6 ${APPDIR}/usr/lib/ || true && \
       # Provide ffmpeg inside AppImage
       TMP_FFMPEG=$(mktemp -d) && \
-      tar -xf "$FFMPEG_TAR" -C "$TMP_FFMPEG" --strip-components=1 && \
-      cp "$TMP_FFMPEG/ffmpeg" "${APPDIR}/usr/bin/ffmpeg" && \
-      cp "$TMP_FFMPEG/ffprobe" "${APPDIR}/usr/bin/ffprobe" && \
-      rm -rf "$TMP_FFMPEG" && \
+      tar -xf "$FFMPEG_TAR" -C "\$TMP_FFMPEG" --strip-components=1 && \
+      cp "\$TMP_FFMPEG/ffmpeg" "${APPDIR}/usr/bin/ffmpeg" && \
+      cp "\$TMP_FFMPEG/ffprobe" "${APPDIR}/usr/bin/ffprobe" && \
+      rm -rf "\$TMP_FFMPEG" && \
       # Icon and desktop files
       cp ${ICON_SOURCE} ${APPDIR}/usr/share/icons/hicolor/256x256/apps/${ICON_NAME} && \
       cp ${ICON_SOURCE} ${APPDIR}/gpt_transcribe.png && \
@@ -88,15 +88,15 @@ Categories=Utility;
 EOF
       cp io.github.gpt_transcribe.metainfo.xml ${APPDIR}/usr/share/metainfo/io.github.gpt_transcribe.metainfo.xml && \
       # AppRun with env for Tcl/Tk and rpath
-      cat > ${APPDIR}/AppRun << 'EOF'
+       cat > ${APPDIR}/AppRun << 'EOF'
 #!/bin/bash
 set -e
-HERE="$(dirname "$(readlink -f "$0")")"
-export PATH="$HERE/usr/bin:$PATH"
-export LD_LIBRARY_PATH="$HERE/usr/lib:${LD_LIBRARY_PATH:-}"
-export TCL_LIBRARY="$HERE/usr/lib/tcl8.6"
-export TK_LIBRARY="$HERE/usr/lib/tk8.6"
-exec "$HERE/usr/bin/gpt_transcribe" "$@"
+HERE="$(dirname "$(readlink -f "\$0")")"
+export PATH="\$HERE/usr/bin:\$PATH"
+export LD_LIBRARY_PATH="\$HERE/usr/lib:\${LD_LIBRARY_PATH:-}"
+export TCL_LIBRARY="\$HERE/usr/lib/tcl8.6"
+export TK_LIBRARY="\$HERE/usr/lib/tk8.6"
+exec "\$HERE/usr/bin/gpt_transcribe" "\$@"
 EOF
       chmod +x ${APPDIR}/AppRun && \
       # Build AppImage
