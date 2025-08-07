@@ -116,8 +116,8 @@ EOF
       chmod +x ${APPDIR}/AppRun && \
       # Build AppImage
       "$APPIMAGETOOL" ${APPDIR} ${OUTPUT_APPIMAGE}
-      # Restore host ownership for created files
-      chown -R "$HOST_UID:$HOST_GID" /src/dist /src/packages || true
+      # Restore host ownership for created files (also AppDir and build for clean local rebuilds)
+      chown -R "$HOST_UID:$HOST_GID" /src/dist /src/packages /src/build "/src/${APPDIR}" || true
     '
 
   if [ -f "${OUTPUT_APPIMAGE}" ]; then
