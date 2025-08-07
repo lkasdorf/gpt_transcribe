@@ -146,8 +146,8 @@ class TranscribeGUI:
         # Apply dark theme
         style = ttk.Style()
         apply_dark_theme(style)
-        palette = style._cursor_palette
-        master.configure(bg=palette['BG'])
+        self.palette = style._cursor_palette
+        master.configure(bg=self.palette['BG'])
 
         self.config = transcribe_summary.load_config(CONFIG_PATH)
         transcribe_summary.ensure_prompt(PROMPT_PATH)
@@ -201,13 +201,13 @@ class TranscribeGUI:
             selectmode='extended',
             relief='flat',
             bd=0,
-            bg=palette['ENTRY_BG'],
-            fg=palette['TEXT'],
+            bg=self.palette['ENTRY_BG'],
+            fg=self.palette['TEXT'],
             highlightthickness=1,
-            highlightcolor=palette['BORDER'],
-            highlightbackground=palette['BORDER'],
-            selectbackground=palette['SELECTION'],
-            selectforeground=palette['TEXT']
+            highlightcolor=self.palette['BORDER'],
+            highlightbackground=self.palette['BORDER'],
+            selectbackground=self.palette['SELECTION'],
+            selectforeground=self.palette['TEXT']
         )
         self.audio_list.grid(row=0, column=0, sticky="ew")
         
@@ -494,7 +494,7 @@ class TranscribeGUI:
     def show_docs(self) -> None:
         doc_win = tk.Toplevel(self.master)
         doc_win.title("Documentation")
-        doc_win.configure(bg=palette['BG'])
+        doc_win.configure(bg=self.palette['BG'])
         doc_win.minsize(800, 600)
         
         # Create a modern text widget with better styling
@@ -506,8 +506,8 @@ class TranscribeGUI:
             width=80, 
             height=30,
             font=('Consolas', 10),
-            bg=palette['ENTRY_BG'],
-            fg=palette['TEXT'],
+            bg=self.palette['ENTRY_BG'],
+            fg=self.palette['TEXT'],
             relief='flat',
             bd=0
         )
@@ -642,12 +642,12 @@ class SettingsWindow(tk.Toplevel):
         button_frame.grid(row=7, column=0, columnspan=3, sticky="ew", pady=(20, 0))
         button_frame.columnconfigure(1, weight=1)
 
-        ModernButton(
-            button_frame, 
-            text="💾 Save Settings", 
+        ttk.Button(
+            button_frame,
+            text="💾 Save Settings",
+            style='Positive.TButton',
             command=self.save_settings,
-            bg='#27ae60',
-            fg='white'
+            cursor='hand2',
         ).grid(row=0, column=2, sticky="e")
 
     def save_settings(self) -> None:
