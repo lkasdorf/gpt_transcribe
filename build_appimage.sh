@@ -50,7 +50,7 @@ if command -v docker >/dev/null 2>&1 && [ "$USE_DOCKER" = "1" ]; then
       
       apt-get update && \
       apt-get install -y --no-install-recommends \
-        python3 python3-venv python3-pip python3-tk \
+        python3 python3-venv python3-pip python3-tk python3-dev libpython3.8 libpython3.8-dev \
         curl ca-certificates patchelf xz-utils \
         tcl tk \
         build-essential && \
@@ -79,6 +79,9 @@ if command -v docker >/dev/null 2>&1 && [ "$USE_DOCKER" = "1" ]; then
       cp /usr/lib/x86_64-linux-gnu/libtk8.6.so ${APPDIR}/usr/lib/ || true && \
       cp -r /usr/lib/tcl8.6 ${APPDIR}/usr/lib/ || true && \
       cp -r /usr/lib/tk8.6 ${APPDIR}/usr/lib/ || true && \
+      # Fallback paths used on some Ubuntu images
+      cp -r /usr/share/tcltk/tcl8.6 ${APPDIR}/usr/lib/ || true && \
+      cp -r /usr/share/tcltk/tk8.6 ${APPDIR}/usr/lib/ || true && \
       # Provide ffmpeg inside AppImage
       TMP_FFMPEG=$(mktemp -d) && \
       tar -xf "$FFMPEG_TAR" -C "$TMP_FFMPEG" --strip-components=1 && \
