@@ -33,8 +33,9 @@ if command -v docker >/dev/null 2>&1 && [ "$USE_DOCKER" = "1" ]; then
   echo "🐳 Building inside Docker container ($DOCKER_IMAGE) for broad glibc compatibility ..."
 
   docker run --rm \
-    --user "$(id -u):$(id -g)" \
     -e DEBIAN_FRONTEND=noninteractive \
+    -e HOST_UID="$(id -u)" \
+    -e HOST_GID="$(id -g)" \
     -v "$(pwd)":"/src":Z \
     -w "/src" \
     "$DOCKER_IMAGE" bash -eu -o pipefail -c '
@@ -55,7 +56,7 @@ if command -v docker >/dev/null 2>&1 && [ "$USE_DOCKER" = "1" ]; then
         build-essential && \
       python3 -m pip install --upgrade pip && \
       python3 -m venv /tmp/.venv && . /tmp/.venv/bin/activate && \
-      pip install --no-cache-dir -r /src/requirements.txt pyinstaller audioop-lts && \
+      pip install --no-cache-dir -r /src/requirements.txt pyinstaller && \
       # Ensure appimagetool and ffmpeg archives
       mkdir -p "$PACKAGES_DIR" "$DIST_DIR" && \
       if [ ! -f "$APPIMAGETOOL" ]; then curl -L -o "$APPIMAGETOOL" "$APPIMAGETOOL_URL"; chmod +x "$APPIMAGETOOL"; fi && \
@@ -111,6 +112,8 @@ EOF
       chmod +x ${APPDIR}/AppRun && \
       # Build AppImage
       "$APPIMAGETOOL" ${APPDIR} ${OUTPUT_APPIMAGE}
+      # Restore host ownership for created files
+      chown -R "$HOST_UID:$HOST_GID" /src/dist /src/packages || true
     '
 
   echo "✅ Done: AppImage created at ${OUTPUT_APPIMAGE}"
