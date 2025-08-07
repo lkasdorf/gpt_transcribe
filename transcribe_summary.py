@@ -323,8 +323,9 @@ def transcribe(
     """
 
     if method == "api":
-        if api_key is None:
-            raise ValueError("API key required for API transcription")
+        # Treat empty string as missing to avoid obscure JSON errors from the client
+        if not api_key:
+            raise ValueError("OpenAI API key missing. Set it in Settings or via OPENAI_API_KEY.")
         from openai import OpenAI
         from pydub import AudioSegment
 

@@ -365,6 +365,15 @@ class TranscribeGUI:
         if not output_dir:
             messagebox.showwarning("No output", "Please select an output directory.")
             return
+        # Early validation of API key when method is API to prevent cryptic errors
+        if self.method_var.get() == "api":
+            api_key_check = transcribe_summary.get_api_key(self.config)
+            if not api_key_check:
+                messagebox.showerror(
+                    "API key missing",
+                    "OpenAI API key is missing. Please open Settings and configure it or set OPENAI_API_KEY.",
+                )
+                return
         missing = [p for p in self.audio_files if not Path(p).is_file()]
         if missing:
             messagebox.showerror("Missing file", f"Audio file not found: {missing[0]}")
@@ -614,6 +623,14 @@ class SettingsWindow(tk.Toplevel):
         )
         self.local_model_cb.grid(row=4, column=1, columnspan=2, sticky="ew", pady=5)
 
+        # Workaround for rare Tkinter quirk where updating one combobox can clear another
+        self._last_summary_model = self.summary_model_var.get()
+        self._last_api_model = self.api_model_var.get()
+        self._last_local_model = self.local_model_var.get()
+        for cb in (self.summary_model_cb, self.api_model_cb, self.local_model_cb):
+            cb.bind("<<ComboboxSelected>>", self._on_model_changed, add=True)
+
+
         # Summary Prompt
         ttk.Label(main_frame, text="Summary Prompt:", style='Header.TLabel').grid(
             row=5, column=0, sticky="nw", padx=(0, 10), pady=(20, 5)
@@ -664,6 +681,21 @@ class SettingsWindow(tk.Toplevel):
         self.app.config = self.config
         messagebox.showinfo("Saved", "Configuration updated successfully!")
         self.destroy()
+
+    def _on_model_changed(self, _event=None) -> None:
+        # Restore other fields if they got cleared inadvertently by Tk
+        if not self.summary_model_var.get():
+            self.summary_model_var.set(self._last_summary_model)
+        else:
+            self._last_summary_model = self.summary_model_var.get()
+        if not self.api_model_var.get():
+            self.api_model_var.set(self._last_api_model)
+        else:
+            self._last_api_model = self.api_model_var.get()
+        if not self.local_model_var.get():
+            self.local_model_var.set(self._last_local_model)
+        else:
+            self._last_local_model = self.local_model_var.get()
 
 
 def main() -> None:
