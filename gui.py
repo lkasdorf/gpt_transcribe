@@ -271,9 +271,12 @@ class TranscribeGUI:
         ttk.Label(settings_frame, text="Method:", style='Header.TLabel').grid(
             row=0, column=0, sticky="w", pady=(0, 5)
         )
-        self.method_var = tk.StringVar(
-            value=self.config["general"].get("method", "api")
-        )
+        # Safe default even if config sections are missing
+        try:
+            default_method = self.config.get("general", "method", fallback="api")
+        except Exception:
+            default_method = "api"
+        self.method_var = tk.StringVar(value=default_method)
         method_combo = ttk.Combobox(
             settings_frame,
             textvariable=self.method_var,
@@ -382,11 +385,21 @@ class TranscribeGUI:
         self.set_status("Working...")
         try:
             method = self.method_var.get()
-            language = self.config["general"].get("language", "en")
-            api_key = self.config["openai"]["api_key"]
-            summary_model = self.config["openai"]["summary_model"]
+            try:
+                language = self.config.get("general", "language", fallback="en")
+            except Exception:
+                language = "en"
+            # Use helper that reads env fallback
+            api_key = transcribe_summary.get_api_key(self.config)
+            try:
+                summary_model = self.config.get("openai", "summary_model", fallback="gpt-4o-mini")
+            except Exception:
+                summary_model = "gpt-4o-mini"
             whisper_section = "whisper_api" if method == "api" else "whisper_local"
-            whisper_model = self.config[whisper_section]["model"]
+            try:
+                whisper_model = self.config.get(whisper_section, "model", fallback=("whisper-1" if method == "api" else "base"))
+            except Exception:
+                whisper_model = "whisper-1" if method == "api" else "base"
             prompt = transcribe_summary._load_text(PROMPT_PATH)
 
             if len(self.audio_files) > 1:

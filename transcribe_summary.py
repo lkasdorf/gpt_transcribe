@@ -131,10 +131,41 @@ def ensure_prompt(path: Path = BASE_DIR / PROMPT_FILE) -> Path:
 def load_config(path: Path = BASE_DIR / CONFIG_FILE) -> configparser.ConfigParser:
     """Load configuration from an INI file, creating it from a template if missing."""
     if not path.exists():
+        # First-time setup: copy template
         shutil.copy(RESOURCE_DIR / CONFIG_TEMPLATE, path)
     config = configparser.ConfigParser()
     with open(path, "r", encoding="utf-8") as f:
-        config.read_file(f)
+        try:
+            config.read_file(f)
+        except Exception:
+            # If the file is corrupt, replace with template
+            shutil.copy(RESOURCE_DIR / CONFIG_TEMPLATE, path)
+            config.read(path, encoding="utf-8")
+
+    # Ensure required sections/keys exist; backfill sensible defaults
+    changed = False
+    defaults = {
+        "general": {"method": "api", "language": "en"},
+        "openai": {"api_key": "YOUR_API_KEY", "summary_model": "gpt-4o-mini"},
+        "whisper_api": {"model": "whisper-1"},
+        "whisper_local": {"model": "base"},
+    }
+    for section, pairs in defaults.items():
+        if not config.has_section(section):
+            config.add_section(section)
+            changed = True
+        for key, value in pairs.items():
+            if not config.has_option(section, key):
+                config.set(section, key, value)
+                changed = True
+
+    if changed:
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                config.write(f)
+        except Exception:
+            # Non-fatal if we cannot write; continue with in-memory defaults
+            pass
     return config
 
 
