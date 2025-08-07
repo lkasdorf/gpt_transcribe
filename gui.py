@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext
 from tkinter import ttk
 from pathlib import Path
+from datetime import datetime
 import threading
 
 import os
@@ -72,63 +73,81 @@ def load_whisper_models(
             local_models.update(local)
     return sorted(api_models), sorted(local_models)
 
+def apply_dark_theme(style: ttk.Style) -> None:
+    """Apply a professional dark theme inspired by modern editors (Cursor/VS Code)."""
+    # Palette
+    BG = '#1e1e1e'
+    SURFACE = '#252526'
+    BORDER = '#333333'
+    TEXT = '#d4d4d4'
+    MUTED = '#9aa0a6'
+    ENTRY_BG = '#2a2a2a'
+    ACCENT = '#3b82f6'
+    POSITIVE = '#10b981'
+    DANGER = '#ef4444'
+    SELECTION = '#094771'
 
-class ModernButton(tk.Button):
-    """A modern styled button with hover effects"""
-    def __init__(self, master, **kwargs):
-        # Default styling for modern buttons
-        kwargs.setdefault('relief', 'flat')
-        kwargs.setdefault('bd', 0)
-        kwargs.setdefault('padx', 15)
-        kwargs.setdefault('pady', 8)
-        kwargs.setdefault('font', ('Segoe UI', 9))
-        kwargs.setdefault('cursor', 'hand2')
-        
-        super().__init__(master, **kwargs)
-        
-        # Bind hover effects
-        self.bind('<Enter>', self._on_enter)
-        self.bind('<Leave>', self._on_leave)
-        
-    def _on_enter(self, event):
-        self.configure(bg='#e1e1e1')
-        
-    def _on_leave(self, event):
-        self.configure(bg='SystemButtonFace')
+    # Base theme
+    style.theme_use('clam')
+
+    # Frames and labels
+    style.configure('TFrame', background=BG)
+    style.configure('Card.TFrame', background=SURFACE, borderwidth=1, relief='solid')
+    style.configure('TLabel', background=SURFACE, foreground=TEXT, font=('Segoe UI', 10))
+    style.configure('Title.TLabel', background=SURFACE, foreground=TEXT, font=('Segoe UI', 18, 'bold'))
+    style.configure('Header.TLabel', background=SURFACE, foreground=TEXT, font=('Segoe UI', 11, 'bold'))
+    style.configure('Info.TLabel', background=SURFACE, foreground=MUTED, font=('Segoe UI', 9))
+    style.configure('Success.TLabel', background=SURFACE, foreground=POSITIVE, font=('Segoe UI', 9))
+    style.configure('Error.TLabel', background=SURFACE, foreground=DANGER, font=('Segoe UI', 9))
+
+    # LabelFrames
+    style.configure('Card.TLabelframe', background=SURFACE, foreground=TEXT, bordercolor=BORDER, relief='solid', borderwidth=1)
+    style.configure('Card.TLabelframe.Label', background=SURFACE, foreground=TEXT, font=('Segoe UI', 10, 'bold'))
+
+    # Entry and combobox
+    style.configure('TEntry', fieldbackground=ENTRY_BG, background=SURFACE, foreground=TEXT, bordercolor=BORDER)
+    style.configure('TCombobox', fieldbackground=ENTRY_BG, background=ENTRY_BG, foreground=TEXT, arrowcolor=TEXT, bordercolor=BORDER)
+
+    # Buttons
+    style.configure('TButton', background=SURFACE, foreground=TEXT, borderwidth=1, focusthickness=0, padding=(12, 6))
+    style.map('TButton', background=[('active', '#2f2f2f')])
+    style.configure('Primary.TButton', background=ACCENT, foreground='white', borderwidth=0, padding=(14, 8), font=('Segoe UI', 10, 'bold'))
+    style.map('Primary.TButton', background=[('active', '#2563eb')])
+    style.configure('Accent.TButton', background=ACCENT, foreground='white', borderwidth=0, padding=(12, 6))
+    style.map('Accent.TButton', background=[('active', '#2563eb')])
+    style.configure('Positive.TButton', background=POSITIVE, foreground='white', borderwidth=0, padding=(12, 6))
+    style.map('Positive.TButton', background=[('active', '#059669')])
+    style.configure('Danger.TButton', background=DANGER, foreground='white', borderwidth=0, padding=(12, 6))
+    style.map('Danger.TButton', background=[('active', '#dc2626')])
+
+    # Progressbar
+    style.configure('Modern.Horizontal.TProgressbar', background=ACCENT, troughcolor=BG, bordercolor=BORDER, lightcolor=ACCENT, darkcolor=ACCENT)
+
+    # Scrollbar
+    style.configure('Vertical.TScrollbar', background=SURFACE, troughcolor=BG, bordercolor=BORDER, arrowcolor=TEXT)
+
+    # Return palette (used by widget configs that are not ttk-styleable)
+    style._cursor_palette = {
+        'BG': BG, 'SURFACE': SURFACE, 'BORDER': BORDER, 'TEXT': TEXT, 'MUTED': MUTED,
+        'ENTRY_BG': ENTRY_BG, 'ACCENT': ACCENT, 'POSITIVE': POSITIVE, 'DANGER': DANGER, 'SELECTION': SELECTION,
+    }
 
 
 class TranscribeGUI:
     def __init__(self, master: tk.Tk) -> None:
         self.master = master
         master.title("GPT Transcribe")
-        master.minsize(700, 500)
-        master.configure(bg='#f5f5f5')
+        master.minsize(760, 560)
         
         # Configure grid weights
         master.columnconfigure(0, weight=1)
         master.rowconfigure(0, weight=1)
         
-        # Apply modern theme
+        # Apply dark theme
         style = ttk.Style()
-        style.theme_use("clam")
-        
-        # Configure modern styles
-        style.configure('Title.TLabel', font=('Segoe UI', 16, 'bold'), foreground='#2c3e50')
-        style.configure('Header.TLabel', font=('Segoe UI', 11, 'bold'), foreground='#34495e')
-        style.configure('Info.TLabel', font=('Segoe UI', 9), foreground='#7f8c8d')
-        style.configure('Success.TLabel', font=('Segoe UI', 9), foreground='#27ae60')
-        style.configure('Error.TLabel', font=('Segoe UI', 9), foreground='#e74c3c')
-        
-        # Configure modern frame style
-        style.configure('Card.TFrame', background='white', relief='solid', borderwidth=1)
-        
-        # Configure modern progress bar
-        style.configure('Modern.Horizontal.TProgressbar', 
-                       background='#3498db', 
-                       troughcolor='#ecf0f1',
-                       borderwidth=0,
-                       lightcolor='#3498db',
-                       darkcolor='#3498db')
+        apply_dark_theme(style)
+        palette = style._cursor_palette
+        master.configure(bg=palette['BG'])
 
         self.config = transcribe_summary.load_config(CONFIG_PATH)
         transcribe_summary.ensure_prompt(PROMPT_PATH)
@@ -162,7 +181,7 @@ class TranscribeGUI:
         title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20), sticky="w")
 
         # Audio Files Section
-        audio_frame = ttk.LabelFrame(main_frame, text="Audio Files", padding=15)
+        audio_frame = ttk.LabelFrame(main_frame, text="Audio Files", padding=15, style='Card.TLabelframe')
         audio_frame.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(0, 15))
         audio_frame.columnconfigure(1, weight=1)
 
@@ -180,40 +199,45 @@ class TranscribeGUI:
             height=6, 
             font=('Segoe UI', 9),
             selectmode='extended',
-            relief='solid',
-            bd=1,
-            bg='white',
-            fg='#2c3e50'
+            relief='flat',
+            bd=0,
+            bg=palette['ENTRY_BG'],
+            fg=palette['TEXT'],
+            highlightthickness=1,
+            highlightcolor=palette['BORDER'],
+            highlightbackground=palette['BORDER'],
+            selectbackground=palette['SELECTION'],
+            selectforeground=palette['TEXT']
         )
         self.audio_list.grid(row=0, column=0, sticky="ew")
         
         # Add scrollbar to listbox
-        audio_scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=self.audio_list.yview)
+        audio_scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=self.audio_list.yview, style='Vertical.TScrollbar')
         audio_scrollbar.grid(row=0, column=1, sticky="ns")
         self.audio_list.configure(yscrollcommand=audio_scrollbar.set)
         
         # Buttons frame
-        button_frame = ttk.Frame(audio_frame)
+        button_frame = ttk.Frame(audio_frame, style='TFrame')
         button_frame.grid(row=2, column=0, columnspan=2, sticky="w")
         
-        ModernButton(
-            button_frame, 
-            text="📁 Add Audio Files", 
+        ttk.Button(
+            button_frame,
+            text="📁 Add Audio Files",
+            style='Accent.TButton',
             command=self.select_audio,
-            bg='#3498db',
-            fg='white'
+            cursor='hand2',
         ).pack(side="left", padx=(0, 10))
         
-        ModernButton(
-            button_frame, 
-            text="🗑️ Clear All", 
+        ttk.Button(
+            button_frame,
+            text="🗑️ Clear All",
+            style='Danger.TButton',
             command=self.clear_audio_files,
-            bg='#e74c3c',
-            fg='white'
+            cursor='hand2',
         ).pack(side="left")
 
         # Output Directory Section
-        output_frame = ttk.LabelFrame(main_frame, text="Output Settings", padding=15)
+        output_frame = ttk.LabelFrame(main_frame, text="Output Settings", padding=15, style='Card.TLabelframe')
         output_frame.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(0, 15))
         output_frame.columnconfigure(1, weight=1)
 
@@ -221,7 +245,7 @@ class TranscribeGUI:
             row=0, column=0, sticky="w", pady=(0, 5)
         )
         
-        output_entry_frame = ttk.Frame(output_frame)
+        output_entry_frame = ttk.Frame(output_frame, style='TFrame')
         output_entry_frame.grid(row=1, column=0, columnspan=2, sticky="ew")
         output_entry_frame.columnconfigure(0, weight=1)
         
@@ -231,16 +255,16 @@ class TranscribeGUI:
             font=('Segoe UI', 9)
         ).grid(row=0, column=0, sticky="ew", padx=(0, 10))
         
-        ModernButton(
-            output_entry_frame, 
-            text="📂 Browse", 
+        ttk.Button(
+            output_entry_frame,
+            text="📂 Browse",
+            style='Positive.TButton',
             command=self.select_output_dir,
-            bg='#2ecc71',
-            fg='white'
+            cursor='hand2',
         ).grid(row=0, column=1)
 
         # Transcription Settings Section
-        settings_frame = ttk.LabelFrame(main_frame, text="Transcription Settings", padding=15)
+        settings_frame = ttk.LabelFrame(main_frame, text="Transcription Settings", padding=15, style='Card.TLabelframe')
         settings_frame.grid(row=3, column=0, columnspan=3, sticky="ew", pady=(0, 15))
         settings_frame.columnconfigure(1, weight=1)
 
@@ -260,7 +284,7 @@ class TranscribeGUI:
         method_combo.grid(row=1, column=0, sticky="w")
 
         # Progress Section
-        progress_frame = ttk.LabelFrame(main_frame, text="Progress", padding=15)
+        progress_frame = ttk.LabelFrame(main_frame, text="Progress", padding=15, style='Card.TLabelframe')
         progress_frame.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(0, 15))
         progress_frame.columnconfigure(0, weight=1)
 
@@ -272,7 +296,7 @@ class TranscribeGUI:
         self.progress.grid(row=0, column=0, sticky="ew", pady=(0, 10))
 
         # Status and action buttons
-        action_frame = ttk.Frame(main_frame)
+        action_frame = ttk.Frame(main_frame, style='TFrame')
         action_frame.grid(row=5, column=0, columnspan=3, sticky="ew")
         action_frame.columnconfigure(0, weight=1)
 
@@ -283,13 +307,12 @@ class TranscribeGUI:
         )
         self.status_label.grid(row=0, column=0, sticky="w")
 
-        ModernButton(
-            action_frame, 
-            text="🎤 Start Transcription", 
+        ttk.Button(
+            action_frame,
+            text="🎤 Start Transcription",
+            style='Primary.TButton',
             command=self.start_transcription,
-            bg='#9b59b6',
-            fg='white',
-            font=('Segoe UI', 10, 'bold')
+            cursor='hand2',
         ).grid(row=0, column=1, sticky="e")
 
     def clear_audio_files(self):
@@ -349,7 +372,8 @@ class TranscribeGUI:
             )
             return
         self.progress["value"] = 0
-        self.progress["maximum"] = len(self.audio_files) * 3
+        # For grouped transcription we have ~1 step per file (transcribe), then summarize, then write
+        self.progress["maximum"] = (len(self.audio_files) + 2) if len(self.audio_files) > 1 else (len(self.audio_files) * 3)
         threading.Thread(
             target=self.transcribe_all, args=(output_dir,), daemon=True
         ).start()
@@ -365,11 +389,59 @@ class TranscribeGUI:
             whisper_model = self.config[whisper_section]["model"]
             prompt = transcribe_summary._load_text(PROMPT_PATH)
 
-            for idx, audio in enumerate(self.audio_files, 1):
-                self.set_status(f"Transcribing {idx}/{len(self.audio_files)}")
+            if len(self.audio_files) > 1:
+                # Group mode: transcribe all files and summarize once
+                combined_transcript_parts: list[str] = []
+                for idx, audio in enumerate(self.audio_files, 1):
+                    self.set_status(f"Transcribing {idx}/{len(self.audio_files)}")
 
-                def update(msg: str, i=idx):
-                    self.set_status(f"{msg} ({i}/{len(self.audio_files)})")
+                    def update(msg: str, i=idx):
+                        self.set_status(f"{msg} ({i}/{len(self.audio_files)})")
+
+                    transcript = transcribe_summary.transcribe(
+                        audio,
+                        model_name=whisper_model,
+                        method=method,
+                        api_key=api_key if method == "api" else None,
+                        progress_cb=update,
+                    )
+                    combined_transcript_parts.append(
+                        f"\n\n=== {Path(audio).name} ===\n\n{transcript}\n"
+                    )
+                    self.step_progress()
+
+                combined_transcript = "".join(combined_transcript_parts).strip()
+                self.set_status("Summarizing (all files)...")
+                summary = transcribe_summary.summarize(
+                    prompt, combined_transcript, summary_model, api_key, language
+                )
+                summary = transcribe_summary.strip_code_fences(summary)
+                self.step_progress()
+
+                # Write single combined output
+                self.set_status("Writing output...")
+                heading = "Summary" if language == "en" else "Zusammenfassung"
+                markdown_content = f"# {heading}\n\n{summary}\n"
+                first_stem = Path(self.audio_files[0]).stem
+                base = f"{datetime.now():%Y%m%d_%H%M%S}_{first_stem}_and_{len(self.audio_files)-1}_more"
+                out_md = Path(output_dir) / f"{base}.md"
+                with open(out_md, "w", encoding="utf-8") as f:
+                    f.write(markdown_content)
+                out_txt = Path(output_dir) / f"{base}.txt"
+                with open(out_txt, "w", encoding="utf-8") as f:
+                    f.write(combined_transcript)
+                pdf_path = out_md.with_suffix(".pdf")
+                transcribe_summary.markdown_to_pdf(markdown_content, str(pdf_path))
+                self.step_progress()
+                self.set_status("✅ Transcription completed successfully!")
+                self.show_info("Finished", f"Summary written to {out_md}")
+            else:
+                # Single-file behavior unchanged
+                audio = self.audio_files[0]
+                self.set_status("Transcribing 1/1")
+
+                def update(msg: str):
+                    self.set_status(f"{msg} (1/1)")
 
                 transcript = transcribe_summary.transcribe(
                     audio,
@@ -397,9 +469,8 @@ class TranscribeGUI:
                 pdf_path = out_md.with_suffix(".pdf")
                 transcribe_summary.markdown_to_pdf(markdown_content, str(pdf_path))
                 self.step_progress()
-
-            self.set_status("✅ Transcription completed successfully!")
-            self.show_info("Finished", f"Summaries written to {output_dir}")
+                self.set_status("✅ Transcription completed successfully!")
+                self.show_info("Finished", f"Summary written to {out_md}")
         except Exception as e:
             self.set_status("❌ Error occurred during transcription")
             self.show_error("Error", str(e))
@@ -410,7 +481,7 @@ class TranscribeGUI:
     def show_docs(self) -> None:
         doc_win = tk.Toplevel(self.master)
         doc_win.title("Documentation")
-        doc_win.configure(bg='#f5f5f5')
+        doc_win.configure(bg=palette['BG'])
         doc_win.minsize(800, 600)
         
         # Create a modern text widget with better styling
@@ -422,8 +493,8 @@ class TranscribeGUI:
             width=80, 
             height=30,
             font=('Consolas', 10),
-            bg='white',
-            fg='#2c3e50',
+            bg=palette['ENTRY_BG'],
+            fg=palette['TEXT'],
             relief='flat',
             bd=0
         )
